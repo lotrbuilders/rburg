@@ -6,6 +6,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
     let state = emit_state();
     let label = emit_label(&program);
     let child = emit_get_child(&program);
+    let vreg = emit_get_vregisters(&program);
     let rule_count = program.definitions.len();
     let non_terminals = emit_get_non_terminals(&program);
     let backend_name = program.implements;
@@ -17,12 +18,14 @@ pub(super) fn emit(program: Program) -> TokenStream {
             instruction_states:Vec<State>,
             rules : Vec<u16>,
             non_terminals: [Vec<usize>;#rule_count],
-
+            vreg2reg: Vec<Register>,
+            reg_relocations: Vec<Vec<RegisterRelocation>>,
         }
         #state
         impl #backend_name {
             #label
             #child
+            #vreg
 
             pub fn new() -> #backend_name {
                 #backend_name {
@@ -31,6 +34,8 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     instruction_states: Vec::new(),
                     rules: Vec::new(),
                     non_terminals: #non_terminals,
+                    vreg2reg: Vec::new(),
+                    reg_relocations: Vec::new(),
                 }
             }
         }
@@ -123,6 +128,14 @@ fn emit_label(program: &Program) -> TokenStream {
 
         fn get_right_index(&self,index:u32) -> u32 {
             self.definition_index[self.instructions[index as usize].get_right().unwrap() as usize]
+        }
+
+        fn get_left_vreg(&self,index:u32) -> u32 {
+            self.instructions[index as usize].get_left().unwrap()
+        }
+
+        fn get_right_vreg(&self,index:u32) -> u32 {
+            self.instructions[index as usize].get_right().unwrap()
         }
 
         pub fn to_string(&self) -> String {
@@ -298,14 +311,12 @@ fn emit_get_child_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream
 fn emit_get_non_terminals(program: &Program) -> TokenStream {
     let mut arms = TokenStream::new();
     for i in 0..program.definitions.len() {
-        println!("{}", i);
         let arm = emit_get_non_terminals_arm(&program.definitions[i].pattern);
         let i = i as u16;
         arms.append_all(quote! {
             {let mut temp=vec![#arm 0];temp.pop();temp}
         });
         if i as usize != program.definitions.len() - 1 {
-            println!(",");
             arms.append_all(quote! {,})
         }
     }
@@ -332,6 +343,71 @@ fn emit_get_non_terminals_arm(pattern: &IRPattern) -> TokenStream {
         IRPattern::Reg(_, _) => quote! {
             reg_NT,
         },
+        IRPattern::Const(_) => TokenStream::new(),
+    }
+}
+
+fn emit_get_vregisters(program: &Program) -> TokenStream {
+    let mut arms = TokenStream::new();
+    for i in 0..program.definitions.len() {
+        let arm = emit_get_vregisters_arm(&program.definitions[i].pattern, &quote! {index});
+        let i = i as u16;
+        arms.append_all(quote! {
+            #i => {let mut temp=vec![#arm (0,& REG_CLASS_EMPTY)];temp.pop();temp}
+        });
+    }
+    quote! {
+
+        fn get_vregisters(&self,index:u32,rule:u16) -> (Vec<(u32,&'static[bool;REG_COUNT])>,Option<u32>)
+        {
+            let used_vregs: Vec<(u32,&'static[bool;REG_COUNT])>=match rule
+            {
+                #arms
+                _ => {
+                    //log::error!("Unsupporteded rule {}",rule);
+                    Vec::new()
+                }
+            };
+            let result_vreg=self.instructions[index as usize].get_result();
+            (used_vregs,result_vreg)
+        }
+    }
+}
+
+fn emit_get_vregisters_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
+    match pattern {
+        IRPattern::Node {
+            term: _,
+            left,
+            right,
+        } => {
+            //let prelude = quote! {self.instructions[#prelude as usize]};
+
+            let left_prelude = if let IRPattern::Reg(..) = **left {
+                quote! {self.get_left_vreg(#prelude) }
+            } else {
+                quote! {self.get_left_index(#prelude)}
+            };
+
+            let mut left = emit_get_vregisters_arm(&*left, &left_prelude);
+            if let Some(right) = right {
+                let right_prelude = if let IRPattern::Reg(..) = **right {
+                    quote! {self.get_right_vreg(#prelude) }
+                } else {
+                    quote! {self.get_right_index(#prelude)}
+                };
+                let right = emit_get_vregisters_arm(&*right, &right_prelude);
+                left.append_all(right);
+            }
+            left
+        }
+        IRPattern::Reg(_, class) => {
+            let class = format_ident!("REG_CLASS_{}", class.to_string().to_uppercase());
+            quote! {
+                (#prelude,& #class),
+            }
+        }
+
         IRPattern::Const(_) => TokenStream::new(),
     }
 }
