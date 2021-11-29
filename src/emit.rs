@@ -7,12 +7,14 @@ pub(super) fn emit(program: Program) -> TokenStream {
     let label = emit_label(&program);
     let child = emit_get_child(&program);
     let vreg = emit_get_vregisters(&program);
-    let rule_count = program.definitions.len();
     let non_terminals = emit_get_non_terminals(&program);
+    let assembly = emit_asm(&program);
+    let rule_count = program.definitions.len();
     let backend_name = program.implements;
 
     quote!(
         pub struct #backend_name {
+            function_name: String,
             instructions: Vec<IRInstruction>,
             definition_index: Vec<u32>,
             instruction_states:Vec<State>,
@@ -26,9 +28,11 @@ pub(super) fn emit(program: Program) -> TokenStream {
             #label
             #child
             #vreg
+            #assembly
 
             pub fn new() -> #backend_name {
                 #backend_name {
+                    function_name: String::new(),
                     instructions: Vec::new(),
                     definition_index: Vec::new(),
                     instruction_states: Vec::new(),
@@ -381,8 +385,6 @@ fn emit_get_vregisters_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
             left,
             right,
         } => {
-            //let prelude = quote! {self.instructions[#prelude as usize]};
-
             let left_prelude = if let IRPattern::Reg(..) = **left {
                 quote! {self.get_left_vreg(#prelude) }
             } else {
@@ -409,5 +411,136 @@ fn emit_get_vregisters_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
         }
 
         IRPattern::Const(_) => TokenStream::new(),
+    }
+}
+
+fn has_used_result(definition: &Definition) -> bool {
+    if let DefinitionType::Reg(..) = definition.name {
+        if definition.template.value().contains("{res}") {
+            return true;
+        }
+    }
+    false
+}
+
+fn emit_asm(program: &Program) -> TokenStream {
+    let mut arms = TokenStream::new();
+
+    for i in 0..program.definitions.len() {
+        let definition = &program.definitions[i];
+        // Does not currently handle # comments in the code. These might have to be removed later at some stage
+        // At the moment all these commments are handled by the handwritten portion.
+        let template = format!("\t{}", definition.template.value());
+        let arm = emit_asm_arm(&definition.pattern, &quote! {index as u32});
+        let format_arm = emit_asm_format(&definition.pattern);
+        let i = i as u16;
+        if has_used_result(definition) {
+            arms.append_all(quote! {
+                #i => {
+                    let res=self.vreg2reg[instruction.get_result().unwrap() as usize].to_string();
+                    #arm
+                    format!(#template,res=res #format_arm)
+                }
+            });
+        } else {
+            arms.append_all(quote! {
+                #i => {
+                    #arm
+                    format!(#template #format_arm)
+                }
+            });
+        }
+    }
+
+    quote! {
+        fn gen_asm(&self,index:usize) -> String
+        {
+            let instruction=&self.instructions[index];
+            let rule=self.rules[index];
+            match rule {
+                #arms
+                _ => {
+                    log::error!("Unkown rule {} when emitting assembly instruction {}",rule,index);
+                    String::new()
+                }
+            }
+        }
+    }
+}
+
+fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
+    match pattern {
+        IRPattern::Node {
+            term: _,
+            left,
+            right,
+        } => {
+            //let prelude = quote! {self.instructions[#prelude as usize]};
+
+            let left_prelude = if let IRPattern::Reg(..) = **left {
+                quote! {self.get_left_vreg(#prelude) }
+            } else if let IRPattern::Const(..) = **left {
+                prelude.clone()
+            } else {
+                quote! {self.get_left_index(#prelude)}
+            };
+
+            let mut left = emit_asm_arm(&*left, &left_prelude);
+            if let Some(right) = right {
+                let right_prelude = if let IRPattern::Reg(..) = **right {
+                    quote! {self.get_right_vreg(#prelude) }
+                } else if let IRPattern::Const(..) = **right {
+                    prelude.clone()
+                } else {
+                    quote! {self.get_right_index(#prelude)}
+                };
+                let right = emit_asm_arm(&*right, &right_prelude);
+                left.append_all(right);
+            }
+            left
+        }
+        IRPattern::Reg(name, _) => {
+            quote! {
+                let #name=self.vreg2reg[#prelude as usize].to_string();
+            }
+        }
+
+        IRPattern::Const(name) => {
+            quote! {
+                let #name=self.instructions[#prelude as usize].get_value();
+            }
+        }
+    }
+}
+
+fn emit_asm_format(pattern: &IRPattern) -> TokenStream {
+    match pattern {
+        IRPattern::Node {
+            term: _,
+            left,
+            right,
+        } => {
+            let mut left = emit_asm_format(&*left);
+            if let Some(right) = right {
+                let right = emit_asm_format(&*right);
+                left.append_all(right);
+            }
+            left
+        }
+        IRPattern::Reg(name, _) => {
+            if let Some('_') = name.to_string().chars().next() {
+                TokenStream::new()
+            } else {
+                quote! {,#name=#name}
+            }
+        }
+
+        IRPattern::Const(name) => {
+            if let Some('_') = name.to_string().chars().next() {
+                TokenStream::new()
+            } else {
+                quote! {,#name=#name}
+            }
+        }
     }
 }
