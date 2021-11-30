@@ -154,7 +154,7 @@ fn emit_label(program: &Program) -> TokenStream {
 }
 
 fn emit_label_arms(program: &Program) -> TokenStream {
-    println!("emit label arms");
+    //println!("emit label arms");
     let mut arms = TokenStream::new();
     for (terminal, indeces) in &program.terminals {
         arms.append_all(emit_label_arm(program, terminal, indeces));
@@ -165,7 +165,7 @@ fn emit_label_arms(program: &Program) -> TokenStream {
 
 #[allow(unused_variables)]
 fn emit_label_arm(program: &Program, terminal: &String, indeces: &Vec<u16>) -> TokenStream {
-    println!("emit label arm {:?}", indeces);
+    //println!("emit label arm {:?}", indeces);
     let mut tokens = TokenStream::new();
     for i in indeces {
         tokens.append_all(emit_label_pattern(program, *i));
@@ -184,7 +184,7 @@ fn emit_label_arm(program: &Program, terminal: &String, indeces: &Vec<u16>) -> T
 }
 
 fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
-    println!("emit label pattern {}", index);
+    //println!("emit label pattern {}", index);
     let definition = &program.definitions[index as usize];
     let pattern = &definition.pattern;
     let mut tokens = TokenStream::new();
@@ -216,7 +216,7 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
     } else {
         println!("Error: Unallowed IR Pattern");
     }
-    println!("tokens:{}", tokens.to_string());
+    //println!("tokens:{}", tokens.to_string());
     tokens
 }
 
@@ -232,10 +232,10 @@ fn emit_label_pattern_cost(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
             left,
             right,
         } => {
-            println!("Node");
+            //println!("Node");
             let left_prelude = quote! {self.get_left_index(#prelude) };
             let mut left = emit_label_pattern_cost(&*left, &left_prelude);
-            println!("left: {}", left.to_string());
+            //println!("left: {}", left.to_string());
             if let Some(right) = right {
                 let right_prelude = quote! {self.get_right_index(#prelude) };
                 let right = emit_label_pattern_cost(&*right, &right_prelude);
@@ -244,13 +244,13 @@ fn emit_label_pattern_cost(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
             left
         }
         IRPattern::Reg(_, _) => {
-            println!("Reg");
+            //println!("Reg");
             quote! {
                 self.instruction_states[#prelude as usize].cost[reg_NT]+
             }
         }
         IRPattern::Const(_) => {
-            println!("Node");
+            //println!("Node");
             TokenStream::new()
         }
     }
@@ -296,7 +296,7 @@ fn emit_get_child_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream
         } => {
             let left_prelude = quote! {self.get_left_index(#prelude) };
             let mut left = emit_get_child_arm(&*left, &left_prelude);
-            println!("left: {}", left.to_string());
+            //println!("left: {}", left.to_string());
             if let Some(right) = right {
                 let right_prelude = quote! {self.get_right_index(#prelude) };
                 let right = emit_get_child_arm(&*right, &right_prelude);
@@ -337,7 +337,7 @@ fn emit_get_non_terminals_arm(pattern: &IRPattern) -> TokenStream {
             right,
         } => {
             let mut left = emit_get_non_terminals_arm(&*left);
-            println!("left: {}", left.to_string());
+            //println!("left: {}", left.to_string());
             if let Some(right) = right {
                 let right = emit_get_non_terminals_arm(&*right);
                 left.append_all(right);
@@ -475,8 +475,6 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
             left,
             right,
         } => {
-            //let prelude = quote! {self.instructions[#prelude as usize]};
-
             let left_prelude = if let IRPattern::Reg(..) = **left {
                 quote! {self.get_left_vreg(#prelude) }
             } else if let IRPattern::Const(..) = **left {
