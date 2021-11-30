@@ -2,6 +2,8 @@ use super::*;
 use std::fmt;
 use std::fmt::Display;
 
+// This module prints the backend code for debugging
+
 impl Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for def in &self.definitions {

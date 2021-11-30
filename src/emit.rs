@@ -1,6 +1,16 @@
 use crate::*;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
+
+// The main function to emit all seperate stage
+// The main stages are
+// - Emitting the state with the correct parameter
+// - Emitting the labelizer
+// - Emit the code needed to find all the children corresponding to an instruction and rule
+// - Emit the code needed to find all the virtual registers used by an instruction and rule
+// - Emit the code to get the new non-terminals when reducing
+// - Emit the assembly producing stage
+// - Emitting the backend itself
 pub(super) fn emit(program: Program) -> TokenStream {
     let mut _result = TokenStream::new();
     let state = emit_state();
@@ -105,7 +115,7 @@ fn emit_label(program: &Program) -> TokenStream {
                 #match_arms
 
                 _ => {
-                    //log::error!("Bad/Unsupported terminal in the instruction selection");
+                    log::error!("Bad/Unsupported terminal in the instruction selection");
                 },
             }
         }
@@ -270,7 +280,8 @@ fn emit_get_child(program: &Program) -> TokenStream {
         {
             match rule_number {
                 #arms
-                _ => {//log::error!("Rule {} does not exist(index={})",rule_number,index),
+                _ => {
+                    log::error!("Rule {} does not exist(index={})",rule_number,index),
                     Vec::new()
                 }
             }
@@ -279,7 +290,7 @@ fn emit_get_child(program: &Program) -> TokenStream {
         fn get_child_non_terminals(&self,rule_number:u16) -> Vec<usize>
         {
             if rule_number==0xffff{
-                //log::error!("Unallowed rule number when getting the non terminal of the children")
+                log::error!("Unallowed rule number when getting the non terminal of the children")
                 return Vec::new();
             }
             self.non_terminals[rule_number as usize].clone()
@@ -368,7 +379,7 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
             {
                 #arms
                 _ => {
-                    //log::error!("Unsupporteded rule {}",rule);
+                    log::error!("Unsupporteded rule {}",rule);
                     Vec::new()
                 }
             };

@@ -45,6 +45,7 @@ enum IRPattern {
     Const(Ident),
 }
 
+// This macro generates the entire backend given in the rburg-DSL
 #[proc_macro]
 pub fn rburg_main(input: TokenStream) -> TokenStream {
     let program = parse_macro_input!(input as Program);
