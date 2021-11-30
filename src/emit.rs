@@ -281,7 +281,7 @@ fn emit_get_child(program: &Program) -> TokenStream {
             match rule_number {
                 #arms
                 _ => {
-                    log::error!("Rule {} does not exist(index={})",rule_number,index),
+                    log::error!("Rule {} does not exist(index={})",rule_number,index);
                     Vec::new()
                 }
             }
@@ -290,7 +290,7 @@ fn emit_get_child(program: &Program) -> TokenStream {
         fn get_child_non_terminals(&self,rule_number:u16) -> Vec<usize>
         {
             if rule_number==0xffff{
-                log::error!("Unallowed rule number when getting the non terminal of the children")
+                log::error!("Unallowed rule number when getting the non terminal of the children");
                 return Vec::new();
             }
             self.non_terminals[rule_number as usize].clone()
