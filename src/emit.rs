@@ -18,6 +18,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
     let child = emit_get_child(&program);
     let vreg = emit_get_vregisters(&program);
     let non_terminals = emit_get_non_terminals(&program);
+    let reduce_non_terminals = emit_reduce_non_terminals(&program);
     let assembly = emit_asm(&program);
     let two_address = emit_two_address(&program);
     let rule_count = program.definitions.len();
@@ -39,6 +40,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
             #label
             #child
             #vreg
+            #reduce_non_terminals
             #assembly
 
             pub fn new() -> #backend_name {
@@ -206,6 +208,7 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
         right: _,
     } = pattern
     {
+        let condition = emit_label_pattern_condition(pattern, &quote! {index});
         let child_cost = emit_label_pattern_cost(pattern, &quote! {index});
         let cost = if let Some(code) = &definition.rust_code {
             code.to_token_stream()
@@ -217,7 +220,7 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
         let nt_type = program.get_nt(index);
 
         tokens.append_all(quote! {
-            {
+            if #condition true {
                 let state= & mut self.instruction_states[index as usize];
                 if cost<state.cost[#nt_type] {
                     state.cost[#nt_type]=cost;
@@ -232,8 +235,32 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
     tokens
 }
 
-fn _emit_label_pattern_condition(_pattern: &IRPattern, _prelude: &TokenStream) -> TokenStream {
-    TokenStream::new()
+fn emit_label_pattern_condition(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
+    //print!("emit label pattern cost");
+    match pattern {
+        IRPattern::Node { term, left, right } => {
+            //println!("Node");
+            let left_prelude = quote! {self.get_left_index(#prelude) };
+            let mut left = emit_label_pattern_condition(&*left, &left_prelude);
+            //println!("left: {}", left.to_string());
+            if let Some(right) = right {
+                let right_prelude = quote! {self.get_right_index(#prelude) };
+                let right = emit_label_pattern_condition(&*right, &right_prelude);
+                left.append_all(right)
+            }
+            quote! {
+                self.instructions[#prelude as usize].to_type()==IRType::#term && #left
+            }
+        }
+        IRPattern::Reg(_, _) => {
+            //println!("Reg");
+            TokenStream::new()
+        }
+        IRPattern::Const(_) => {
+            //println!("Node");
+            TokenStream::new()
+        }
+    }
 }
 
 fn emit_label_pattern_cost(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
@@ -291,11 +318,16 @@ fn emit_get_child(program: &Program) -> TokenStream {
 
         fn get_child_non_terminals(&self,rule_number:u16) -> Vec<usize>
         {
-            if rule_number==0xffff{
-                log::error!("Unallowed rule number when getting the non terminal of the children");
-                return Vec::new();
+            match rule_number {
+                0xffff => {
+                    log::error!("Unallowed rule number when getting the non terminal of the children");
+                    return Vec::new();
+                }
+                0xfffe => {
+                    return Vec::new();
+                }
+                _ => self.non_terminals[rule_number as usize].clone()
             }
-            self.non_terminals[rule_number as usize].clone()
         }
     }
 }
@@ -361,6 +393,63 @@ fn emit_get_non_terminals_arm(pattern: &IRPattern) -> TokenStream {
             reg_NT,
         },
         IRPattern::Const(_) => TokenStream::new(),
+    }
+}
+
+fn emit_reduce_non_terminals(program: &Program) -> TokenStream {
+    let mut arms = TokenStream::new();
+    for i in 0..program.definitions.len() {
+        let arm = emit_reduce_non_terminals_arm(&program.definitions[i].pattern, &quote! {index});
+        let i = i as u16;
+        arms.append_all(quote! {
+            #i => {
+                #arm
+            },
+        })
+    }
+    quote! {
+        fn reduce_non_terminals(&mut self,index:u32,rule_number:u16) -> ()
+        {
+            match rule_number {
+                #arms
+                _ => {
+                    log::error!("Rule {} does not exist(index={})",rule_number,index);
+                }
+            }
+        }
+    }
+}
+
+fn emit_reduce_non_terminals_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
+    //print!("emit label pattern cost");
+    match pattern {
+        IRPattern::Node {
+            term: _,
+            left,
+            right,
+        } => {
+            //println!("Node");
+            let left_prelude = quote! {self.get_left_index(#prelude) };
+            let mut left = emit_reduce_non_terminals_arm(&*left, &left_prelude);
+            //println!("left: {}", left.to_string());
+            if let Some(right) = right {
+                let right_prelude = quote! {self.get_right_index(#prelude) };
+                let right = emit_reduce_non_terminals_arm(&*right, &right_prelude);
+                left.append_all(right)
+            }
+            quote! {
+                let i=#prelude as usize;
+                self.rules[i] = 0xfffe; #left
+            }
+        }
+        IRPattern::Reg(_, _) => {
+            //println!("Reg");
+            TokenStream::new()
+        }
+        IRPattern::Const(_) => {
+            //println!("Node");
+            TokenStream::new()
+        }
     }
 }
 
