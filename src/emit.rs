@@ -450,7 +450,7 @@ fn emit_asm(program: &Program) -> TokenStream {
         if has_used_result(definition) {
             arms.append_all(quote! {
                 #i => {
-                    let res=self.vreg2reg[instruction.get_result().unwrap() as usize].to_string();
+                    let res=self.vreg2reg[instruction.get_result().unwrap() as usize];
                     #arm
                     format!(#template,res=res #format_arm)
                 }
@@ -512,7 +512,7 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
         }
         IRPattern::Reg(name, _) => {
             quote! {
-                let #name=self.vreg2reg[#prelude as usize].to_string();
+                let #name=self.vreg2reg[#prelude as usize];
             }
         }
 
