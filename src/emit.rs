@@ -19,6 +19,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
     let vreg = emit_get_vregisters(&program);
     let non_terminals = emit_get_non_terminals(&program);
     let assembly = emit_asm(&program);
+    let two_address = emit_two_address(&program);
     let rule_count = program.definitions.len();
     let backend_name = program.implements;
 
@@ -53,6 +54,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
                 }
             }
         }
+        #two_address
     )
 }
 
@@ -373,9 +375,9 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
     }
     quote! {
 
-        fn get_vregisters(&self,index:u32,rule:u16) -> (Vec<(u32,&'static[bool;REG_COUNT])>,Option<u32>)
+        fn get_vregisters(&self,index:u32,rule:u16) -> (Vec<(u32,&'static RegisterClass)>,Option<u32>)
         {
-            let used_vregs: Vec<(u32,&'static[bool;REG_COUNT])>=match rule
+            let used_vregs: Vec<(u32,&'static RegisterClass)>=match rule
             {
                 #arms
                 _ => {
@@ -549,6 +551,34 @@ fn emit_asm_format(pattern: &IRPattern) -> TokenStream {
                 TokenStream::new()
             } else {
                 quote! {,#name=#name}
+            }
+        }
+    }
+}
+
+fn emit_two_address(program: &Program) -> TokenStream {
+    let mut result = TokenStream::new();
+    let mut first = true;
+    for index in 0..program.definitions.len() {
+        let pattern = &program.definitions[index];
+        let rule = index as u16;
+        if pattern.two_address {
+            if !first {
+                result.append_all(quote! {|});
+            }
+            first = false;
+            result.append_all(quote! {#rule});
+        }
+    }
+    if result.is_empty() {
+        quote! { fn is_two_address(rule:u16) -> bool { false } }
+    } else {
+        quote! {
+            fn is_two_address(rule:u16) -> bool {
+                match rule {
+                    #result => true,
+                    _ => false,
+                }
             }
         }
     }

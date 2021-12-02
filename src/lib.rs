@@ -27,6 +27,7 @@ struct Definition {
     pattern: IRPattern,
     template: LitStr,
     rust_code: Option<Block>,
+    two_address: bool,
 }
 
 enum DefinitionType {

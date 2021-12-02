@@ -61,6 +61,10 @@ impl Parse for Definition {
     fn parse(input: ParseStream) -> Result<Self> {
         let name = input.parse()?;
         let pattern = input.parse()?;
+        let two_address = input.peek(Token![?]);
+        if two_address {
+            input.parse::<Token![?]>()?;
+        }
         let template = input.parse()?;
         let rust_code = match input.parse::<Block>() {
             Ok(block) => Some(block),
@@ -72,6 +76,7 @@ impl Parse for Definition {
             pattern,
             template,
             rust_code,
+            two_address,
         })
     }
 }
@@ -103,8 +108,8 @@ impl Parse for IRPattern {
                 let content;
                 parenthesized!(content in input);
                 let left = Box::new(content.parse::<IRPattern>()?);
-                let right = if input.peek(Token![,]) {
-                    input.parse::<Token![,]>()?;
+                let right = if content.peek(Token![,]) {
+                    content.parse::<Token![,]>()?;
                     Some(Box::new(content.parse::<IRPattern>()?))
                 } else {
                     None
