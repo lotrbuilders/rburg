@@ -18,7 +18,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
     let child = emit_get_child(&program);
     let vreg = emit_get_vregisters(&program);
     let non_terminals = emit_get_non_terminals(&program);
-    let reduce_non_terminals = emit_reduce_non_terminals(&program);
+    let reduce_terminals = emit_reduce_terminals(&program);
     let assembly = emit_asm(&program);
     let two_address = emit_two_address(&program);
     let rule_count = program.definitions.len();
@@ -40,7 +40,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
             #label
             #child
             #vreg
-            #reduce_non_terminals
+            #reduce_terminals
             #assembly
 
             pub fn new() -> #backend_name {
@@ -396,10 +396,10 @@ fn emit_get_non_terminals_arm(pattern: &IRPattern) -> TokenStream {
     }
 }
 
-fn emit_reduce_non_terminals(program: &Program) -> TokenStream {
+fn emit_reduce_terminals(program: &Program) -> TokenStream {
     let mut arms = TokenStream::new();
     for i in 0..program.definitions.len() {
-        let arm = emit_reduce_non_terminals_arm(&program.definitions[i].pattern, &quote! {index});
+        let arm = emit_reduce_terminals_arm(&program.definitions[i].pattern, &quote! {index});
         let i = i as u16;
         arms.append_all(quote! {
             #i => {
@@ -408,7 +408,7 @@ fn emit_reduce_non_terminals(program: &Program) -> TokenStream {
         })
     }
     quote! {
-        fn reduce_non_terminals(&mut self,index:u32,rule_number:u16) -> ()
+        fn reduce_terminals(&mut self,index:u32,rule_number:u16) -> ()
         {
             match rule_number {
                 #arms
@@ -420,7 +420,7 @@ fn emit_reduce_non_terminals(program: &Program) -> TokenStream {
     }
 }
 
-fn emit_reduce_non_terminals_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
+fn emit_reduce_terminals_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
     //print!("emit label pattern cost");
     match pattern {
         IRPattern::Node {
@@ -430,11 +430,11 @@ fn emit_reduce_non_terminals_arm(pattern: &IRPattern, prelude: &TokenStream) -> 
         } => {
             //println!("Node");
             let left_prelude = quote! {self.get_left_index(#prelude) };
-            let mut left = emit_reduce_non_terminals_arm(&*left, &left_prelude);
+            let mut left = emit_reduce_terminals_arm(&*left, &left_prelude);
             //println!("left: {}", left.to_string());
             if let Some(right) = right {
                 let right_prelude = quote! {self.get_right_index(#prelude) };
-                let right = emit_reduce_non_terminals_arm(&*right, &right_prelude);
+                let right = emit_reduce_terminals_arm(&*right, &right_prelude);
                 left.append_all(right)
             }
             quote! {
