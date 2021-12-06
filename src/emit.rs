@@ -34,6 +34,8 @@ pub(super) fn emit(program: Program) -> TokenStream {
             non_terminals: [Vec<usize>;#rule_count],
             vreg2reg: Vec<Register>,
             reg_relocations: Vec<Vec<RegisterRelocation>>,
+            local_offsets: Vec<i32>,
+            stack_size: i32,
         }
         #state
         impl #backend_name {
@@ -53,6 +55,8 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     non_terminals: #non_terminals,
                     vreg2reg: Vec::new(),
                     reg_relocations: Vec::new(),
+                    local_offsets: Vec::new(),
+                    stack_size: 0,
                 }
             }
         }
@@ -141,10 +145,12 @@ fn emit_label(program: &Program) -> TokenStream {
         }
 
         fn get_left_index(&self,index:u32) -> u32 {
+            log::trace!("Get left index of {}",index);
             self.definition_index[self.instructions[index as usize].get_left().unwrap() as usize]
         }
 
         fn get_right_index(&self,index:u32) -> u32 {
+            log::trace!("Get right index of {}",index);
             self.definition_index[self.instructions[index as usize].get_right().unwrap() as usize]
         }
 
@@ -154,6 +160,18 @@ fn emit_label(program: &Program) -> TokenStream {
 
         fn get_right_vreg(&self,index:u32) -> u32 {
             self.instructions[index as usize].get_right().unwrap()
+        }
+
+        fn get_value(&self, instruction:u32) -> String {
+            let instruction = &self.instructions[instruction as usize];
+            match instruction {
+                &IRInstruction::Imm(_, _, value) => format!("{}", value),
+                &IRInstruction::AddrL(_,_,i) => format!("{}", self.local_offsets[i]),
+                _ => {
+                    log::error!("get value called without value");
+                    format!("")
+                }
+            }
         }
 
         pub fn to_string(&self) -> String {
@@ -561,6 +579,7 @@ fn emit_asm(program: &Program) -> TokenStream {
             let rule=self.rules[index];
             match rule {
                 #arms
+                0xfffe => String::new(),
                 _ => {
                     log::error!("Unkown rule {} when emitting assembly instruction {}",rule,index);
                     String::new()
@@ -607,7 +626,7 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
 
         IRPattern::Const(name) => {
             quote! {
-                let #name=self.instructions[#prelude as usize].get_value();
+                let #name=self.get_value(#prelude);
             }
         }
     }
