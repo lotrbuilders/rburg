@@ -29,11 +29,15 @@ pub(super) fn emit(program: Program) -> TokenStream {
             function_name: String,
             instructions: Vec<IRInstruction>,
             definition_index: Vec<u32>,
+            use_count: Vec<u32>,
+
             instruction_states:Vec<State>,
             rules : Vec<u16>,
             non_terminals: [Vec<usize>;#rule_count],
+
             vreg2reg: Vec<Register>,
             reg_relocations: Vec<Vec<RegisterRelocation>>,
+
             local_offsets: Vec<i32>,
             stack_size: i32,
         }
@@ -50,11 +54,15 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     function_name: String::new(),
                     instructions: Vec::new(),
                     definition_index: Vec::new(),
+                    use_count: Vec::new(),
+
                     instruction_states: Vec::new(),
                     rules: Vec::new(),
                     non_terminals: #non_terminals,
+
                     vreg2reg: Vec::new(),
                     reg_relocations: Vec::new(),
+
                     local_offsets: Vec::new(),
                     stack_size: 0,
                 }
@@ -145,12 +153,12 @@ fn emit_label(program: &Program) -> TokenStream {
         }
 
         fn get_left_index(&self,index:u32) -> u32 {
-            log::trace!("Get left index of {}",index);
+            //log::trace!("Get left index of {}",index);
             self.definition_index[self.instructions[index as usize].get_left().unwrap() as usize]
         }
 
         fn get_right_index(&self,index:u32) -> u32 {
-            log::trace!("Get right index of {}",index);
+            //log::trace!("Get right index of {}",index);
             self.definition_index[self.instructions[index as usize].get_right().unwrap() as usize]
         }
 
@@ -162,6 +170,7 @@ fn emit_label(program: &Program) -> TokenStream {
             self.instructions[index as usize].get_right().unwrap()
         }
 
+        // Get the value of immediate instructions in string form
         fn get_value(&self, instruction:u32) -> String {
             let instruction = &self.instructions[instruction as usize];
             match instruction {
@@ -222,6 +231,7 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
     let mut tokens = TokenStream::new();
     if let IRPattern::Node {
         term: _,
+        size: _,
         left: _,
         right: _,
     } = pattern
@@ -233,13 +243,14 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
         } else {
             quote! {0}
         };
-        tokens = quote! {let cost = #child_cost #cost;};
+        tokens = quote! {};
 
         let nt_type = program.get_nt(index);
 
         tokens.append_all(quote! {
             if #condition true {
-                let state= & mut self.instruction_states[index as usize];
+                let cost = #child_cost #cost;
+                let state = &mut self.instruction_states[index as usize];
                 if cost<state.cost[#nt_type] {
                     state.cost[#nt_type]=cost;
                     state.rule[#nt_type]=#index;
@@ -256,8 +267,18 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
 fn emit_label_pattern_condition(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
     //print!("emit label pattern cost");
     match pattern {
-        IRPattern::Node { term, left, right } => {
+        IRPattern::Node {
+            term,
+            size,
+            left,
+            right,
+        } => {
             //println!("Node");
+            let size = size
+                .clone()
+                .map(|id| quote!(#id))
+                .unwrap_or_else(|| get_default_size(term));
+
             let left_prelude = quote! {self.get_left_index(#prelude) };
             let mut left = emit_label_pattern_condition(&*left, &left_prelude);
             //println!("left: {}", left.to_string());
@@ -267,7 +288,7 @@ fn emit_label_pattern_condition(pattern: &IRPattern, prelude: &TokenStream) -> T
                 left.append_all(right)
             }
             quote! {
-                self.instructions[#prelude as usize].to_type()==IRType::#term && #left
+                self.instructions[#prelude as usize].to_type()==IRType::#term && self.instructions[#prelude as usize].get_size()==IRSize::#size && #left
             }
         }
         IRPattern::Reg(_, _) => {
@@ -286,6 +307,7 @@ fn emit_label_pattern_cost(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
     match pattern {
         IRPattern::Node {
             term: _,
+            size: _,
             left,
             right,
         } => {
@@ -354,6 +376,7 @@ fn emit_get_child_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream
     match pattern {
         IRPattern::Node {
             term: _,
+            size: _,
             left,
             right,
         } => {
@@ -396,6 +419,7 @@ fn emit_get_non_terminals_arm(pattern: &IRPattern) -> TokenStream {
     match pattern {
         IRPattern::Node {
             term: _,
+            size: _,
             left,
             right,
         } => {
@@ -443,6 +467,7 @@ fn emit_reduce_terminals_arm(pattern: &IRPattern, prelude: &TokenStream) -> Toke
     match pattern {
         IRPattern::Node {
             term: _,
+            size: _,
             left,
             right,
         } => {
@@ -502,6 +527,7 @@ fn emit_get_vregisters_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
     match pattern {
         IRPattern::Node {
             term: _,
+            size: _,
             left,
             right,
         } => {
@@ -593,6 +619,7 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
     match pattern {
         IRPattern::Node {
             term: _,
+            size: _,
             left,
             right,
         } => {
@@ -636,6 +663,7 @@ fn emit_asm_format(pattern: &IRPattern) -> TokenStream {
     match pattern {
         IRPattern::Node {
             term: _,
+            size: _,
             left,
             right,
         } => {

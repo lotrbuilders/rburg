@@ -38,12 +38,33 @@ enum DefinitionType {
 enum IRPattern {
     Node {
         term: Ident,
+        size: Option<Ident>,
         left: Box<IRPattern>,
         right: Option<Box<IRPattern>>,
     },
     Reg(Ident, Ident),
     //NonTerm(Ident, Ident),
     Const(Ident),
+}
+
+fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
+    use quote::{quote, TokenStreamExt};
+    let mut result = proc_macro2::TokenStream::new();
+    let str = match &ident.to_string() as &str {
+        "AddrL" => "P",
+
+        "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Eq" => "I32",
+
+        "Mul" | "Div" => "S32",
+
+        _ => {
+            result.append_all(quote! {compile_error!("Unsupported operation for default size");});
+            " "
+        }
+    };
+    let ident = format_ident!("{}", str);
+    result.append_all(quote!(#ident));
+    result
 }
 
 // This macro generates the entire backend given in the rburg-DSL

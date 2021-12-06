@@ -12,10 +12,11 @@ This module parses the program description in the rburg-DSL given to the backend
 <definition>
     (%reg|!non-term!|<empty>): <tree> template {<rust-code>}
 <tree>:
-    | <term> [ ' ( ' <tree> [ , <tree> ] ' ) ' ]
+    | <term> [<size>] [ '(' <tree> [ , <tree> ] ')' ]
     | !<name> <non-term>!
     | <name> '%'<reg>
     | '#' <name>
+
 */
 use crate::*;
 use std::collections::HashMap;
@@ -105,6 +106,14 @@ impl Parse for IRPattern {
         match term.to_string().chars().next().unwrap() {
             // If it starts with a capital letter it must be a terminal
             'A'..='Z' => {
+                let size = if input.peek(Ident) {
+                    let ident = input.parse::<Ident>()?;
+                    let ident = Ident::new(&ident.to_string().to_uppercase(), ident.span());
+                    Some(ident)
+                } else {
+                    None
+                };
+
                 let content;
                 parenthesized!(content in input);
                 let left = Box::new(content.parse::<IRPattern>()?);
@@ -114,7 +123,12 @@ impl Parse for IRPattern {
                 } else {
                     None
                 };
-                Ok(IRPattern::Node { term, left, right })
+                Ok(IRPattern::Node {
+                    term,
+                    size,
+                    left,
+                    right,
+                })
             }
             _ => {
                 let name = term;

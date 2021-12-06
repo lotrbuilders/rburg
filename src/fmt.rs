@@ -1,6 +1,6 @@
 use super::*;
-use std::fmt;
 use std::fmt::Display;
+use std::fmt::{self};
 
 // This module prints the backend code for debugging
 
@@ -49,8 +49,17 @@ impl Display for IRPattern {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use IRPattern::*;
         match self {
-            Node { term, left, right } => {
-                write!(f, "{} ({}", term, *left)?;
+            Node {
+                term,
+                size,
+                left,
+                right,
+            } => {
+                write!(f, "{} ", term)?;
+                if let Some(size) = size {
+                    write!(f, " {}", *size)?;
+                }
+                write!(f, " ({}", *left)?;
                 if let Some(right) = right {
                     write!(f, ", {}", *right)?;
                 }
