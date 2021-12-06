@@ -170,6 +170,10 @@ fn emit_label(program: &Program) -> TokenStream {
             self.instructions[index as usize].get_right().unwrap()
         }
 
+        fn get_vreg_use_count(&self,index:u32) -> u32 {
+            self.instructions[index as usize].get_result().map(|res| self.use_count[res as usize]).unwrap_or(0)
+        }
+
         // Get the value of immediate instructions in string form
         fn get_value(&self, instruction:u32) -> String {
             let instruction = &self.instructions[instruction as usize];
@@ -236,7 +240,7 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
         right: _,
     } = pattern
     {
-        let condition = emit_label_pattern_condition(pattern, &quote! {index});
+        let condition = emit_label_pattern_condition(pattern, &quote! {index}, true);
         let child_cost = emit_label_pattern_cost(pattern, &quote! {index});
         let cost = if let Some(code) = &definition.rust_code {
             code.to_token_stream()
@@ -264,7 +268,11 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
     tokens
 }
 
-fn emit_label_pattern_condition(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
+fn emit_label_pattern_condition(
+    pattern: &IRPattern,
+    prelude: &TokenStream,
+    root: bool,
+) -> TokenStream {
     //print!("emit label pattern cost");
     match pattern {
         IRPattern::Node {
@@ -280,15 +288,24 @@ fn emit_label_pattern_condition(pattern: &IRPattern, prelude: &TokenStream) -> T
                 .unwrap_or_else(|| get_default_size(term));
 
             let left_prelude = quote! {self.get_left_index(#prelude) };
-            let mut left = emit_label_pattern_condition(&*left, &left_prelude);
+            let mut left = emit_label_pattern_condition(&*left, &left_prelude, false);
             //println!("left: {}", left.to_string());
             if let Some(right) = right {
                 let right_prelude = quote! {self.get_right_index(#prelude) };
-                let right = emit_label_pattern_condition(&*right, &right_prelude);
+                let right = emit_label_pattern_condition(&*right, &right_prelude, false);
                 left.append_all(right)
             }
+
+            let check_use_count = if !root {
+                quote! {&& self.get_vreg_use_count(#prelude) <= 1}
+            } else {
+                TokenStream::new()
+            };
             quote! {
-                self.instructions[#prelude as usize].to_type()==IRType::#term && self.instructions[#prelude as usize].get_size()==IRSize::#size && #left
+                self.instructions[#prelude as usize].to_type()==IRType::#term
+                && self.instructions[#prelude as usize].get_size()==IRSize::#size
+                #check_use_count
+                && #left
             }
         }
         IRPattern::Reg(_, _) => {
