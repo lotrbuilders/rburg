@@ -320,7 +320,7 @@ fn emit_label_pattern_condition(
 }
 
 fn emit_label_pattern_cost(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
-    print!("emit label pattern cost");
+    //print!("emit label pattern cost");
     match pattern {
         IRPattern::Node {
             term: _,

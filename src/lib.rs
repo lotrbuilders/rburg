@@ -1,3 +1,4 @@
+mod check;
 mod emit;
 mod fmt;
 mod parse;
@@ -5,12 +6,16 @@ mod parse;
 use std::collections::HashMap;
 
 use proc_macro::TokenStream;
-use quote::format_ident;
+use proc_macro2::Span;
+use quote::{format_ident, TokenStreamExt};
 use syn::{parse_macro_input, Block, Ident, LitStr};
+
+use crate::check::Checkable;
 
 struct Program {
     implements: Ident,
     definitions: Vec<Definition>,
+    span: Vec<Span>,
     terminals: HashMap<String, Vec<u16>>,
 }
 
@@ -48,7 +53,7 @@ enum IRPattern {
 }
 
 fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
-    use quote::{quote, TokenStreamExt};
+    use quote::quote;
     let mut result = proc_macro2::TokenStream::new();
     let str = match &ident.to_string() as &str {
         "AddrL" => "P",
@@ -71,6 +76,13 @@ fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
 #[proc_macro]
 pub fn rburg_main(input: TokenStream) -> TokenStream {
     let program = parse_macro_input!(input as Program);
-    println!("{}", program);
-    emit::emit(program).into()
+    //println!("{}", program);
+    let mut result = if let Err(err) = program.check(&Span::call_site()) {
+        err
+    } else {
+        proc_macro2::TokenStream::new()
+    };
+
+    result.append_all(emit::emit(program));
+    result.into()
 }

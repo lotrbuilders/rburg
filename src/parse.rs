@@ -19,6 +19,7 @@ This module parses the program description in the rburg-DSL given to the backend
 
 */
 use crate::*;
+use proc_macro2::Span;
 use std::collections::HashMap;
 use syn::parenthesized;
 use syn::parse::{Parse, ParseStream};
@@ -30,7 +31,9 @@ impl Parse for Program {
         let implements = input.parse()?;
         input.parse::<Token![,]>()?;
         let mut definitions = Vec::<Definition>::new();
+        let mut span = Vec::<Span>::new();
         while !input.is_empty() {
+            span.push(input.span());
             definitions.push(input.parse::<Definition>()?);
         }
 
@@ -53,6 +56,7 @@ impl Parse for Program {
         Ok(Program {
             implements,
             definitions,
+            span,
             terminals,
         })
     }
