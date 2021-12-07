@@ -13,8 +13,9 @@ use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 // - Emitting the backend itself
 pub(super) fn emit(program: Program) -> TokenStream {
     let mut _result = TokenStream::new();
-    let state = emit_state();
+    let state = emit_state(&program.non_terminals);
     let label = emit_label(&program);
+    let equivelances = emit_label_equivelances(&program);
     let child = emit_get_child(&program);
     let vreg = emit_get_vregisters(&program);
     let non_terminals = emit_get_non_terminals(&program);
@@ -45,6 +46,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
         #state
         impl #backend_name {
             #label
+            #equivelances
             #child
             #vreg
             #reduce_terminals
@@ -75,23 +77,33 @@ pub(super) fn emit(program: Program) -> TokenStream {
     )
 }
 
-fn emit_state() -> TokenStream {
+fn emit_state(non_terminals: &HashSet<String>) -> TokenStream {
+    let length = non_terminals.len() + 2;
+    let non_terminals = non_terminals
+        .iter()
+        .map(|s| format_ident!("{}_NT", s))
+        .zip(2usize..)
+        .map(|(id, i)| quote! {const #id:usize=#i;})
+        .flatten()
+        .collect::<TokenStream>();
+
     quote!(
         const stmt_NT:usize=0;
         const reg_NT:usize=1;
+        #non_terminals
 
         #[derive(Clone)]
         struct State {
-            cost: [u16; 2],
-            rule: [u16; 2],
+            cost: [u16; #length],
+            rule: [u16; #length],
             labeled: bool,
         }
 
         impl State {
             fn new()->State {
                 State{
-                    cost:[0x7fff,0x7fff],
-                    rule:[0xffff,0xffff],
+                    cost:[0x7fff;#length],
+                    rule:[0xffff;#length],
                     labeled: false,
                 }
             }
@@ -245,12 +257,15 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
         let child_cost = emit_label_pattern_cost(pattern, &quote! {index});
         let cost = if let Some(code) = &definition.rust_code {
             code.to_token_stream()
+        } else if let DefinitionType::Reg(..) | DefinitionType::Stmt = definition.name {
+            quote! {1}
         } else {
             quote! {0}
         };
-        tokens = quote! {};
+        //tokens = quote! {};
 
         let nt_type = program.get_nt(index);
+        let nt_equivelance = definition.get_equivelance();
 
         tokens.append_all(quote! {
             if #condition true {
@@ -259,6 +274,7 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
                 if cost<state.cost[#nt_type] {
                     state.cost[#nt_type]=cost;
                     state.rule[#nt_type]=#index;
+                    self.#nt_equivelance(index as usize,cost);
                 }
             }
         });
@@ -364,6 +380,69 @@ fn emit_label_pattern_cost(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
     }
 }
 
+fn emit_label_equivelances(program: &Program) -> TokenStream {
+    let mut result = TokenStream::new();
+    for non_terminal in program
+        .non_terminals
+        .iter()
+        .chain(vec!["reg".to_string(), "stmt".to_string()].iter())
+    {
+        let empty = Vec::<u16>::new();
+        let equivelances = program
+            .nt_equivelances
+            .get(non_terminal)
+            .unwrap_or_else(|| &empty);
+
+        let arms = equivelances
+            .iter()
+            .map(|i| &program.definitions[*i as usize])
+            .zip(equivelances.iter())
+            .map(|(definition, i)| emit_label_equivelances_arm(definition, *i))
+            .flatten()
+            .collect::<TokenStream>();
+
+        let ident = format_ident!("label_equivelance_{}", non_terminal);
+        result.append_all(quote! {
+            fn #ident(&mut self,index:usize,cost:u16)
+            {
+                #arms
+            }
+        });
+    }
+    result
+}
+
+fn emit_label_equivelances_arm(definition: &Definition, index: u16) -> TokenStream {
+    let nonterm = match &definition.name {
+        DefinitionType::NonTerm(nonterm) => nonterm.to_string(),
+        DefinitionType::Reg(..) => "reg".to_string(),
+        DefinitionType::Stmt => "stmt".to_string(),
+        //_ => unreachable!(),
+    };
+
+    let cost = definition
+        .rust_code
+        .as_ref()
+        .map(|c| c.to_token_stream())
+        .unwrap_or_else(|| quote! {0});
+
+    let rule = format_ident!("{}_NT", nonterm);
+    let equivelance = format_ident!("label_equivelance_{}", nonterm);
+
+    quote! {
+            {
+            let  state = &mut self.instruction_states[index];
+            let cost = cost + #cost;
+            if(cost<state.cost[#rule])
+            {
+                state.cost[#rule]=cost;
+                state.rule[#rule]=#index;
+                self.#equivelance(index,cost);
+            }
+        }
+    }
+}
+
 fn emit_get_child(program: &Program) -> TokenStream {
     let mut arms = TokenStream::new();
     for i in 0..program.definitions.len() {
@@ -376,6 +455,7 @@ fn emit_get_child(program: &Program) -> TokenStream {
     quote! {
         fn get_kids(&self,index:u32,rule_number:u16) -> Vec<u32>
         {
+            //log::trace!("Get kids of {} with rule {}",index,rule_number);
             match rule_number {
                 #arms
                 _ => {
@@ -387,6 +467,7 @@ fn emit_get_child(program: &Program) -> TokenStream {
 
         fn get_child_non_terminals(&self,rule_number:u16) -> Vec<usize>
         {
+            //log::trace!("Get non_terminals of rule {}",rule_number);
             match rule_number {
                 0xffff => {
                     log::error!("Unallowed rule number when getting the non terminal of the children");
@@ -477,7 +558,7 @@ fn emit_get_non_terminals_arm(pattern: &IRPattern) -> TokenStream {
 fn emit_reduce_terminals(program: &Program) -> TokenStream {
     let mut arms = TokenStream::new();
     for i in 0..program.definitions.len() {
-        let arm = emit_reduce_terminals_arm(&program.definitions[i].pattern, &quote! {index});
+        let arm = emit_reduce_terminals_arm(&program.definitions[i].pattern, &quote! {index}, true);
         let i = i as u16;
         arms.append_all(quote! {
             #i => {
@@ -498,7 +579,11 @@ fn emit_reduce_terminals(program: &Program) -> TokenStream {
     }
 }
 
-fn emit_reduce_terminals_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
+fn emit_reduce_terminals_arm(
+    pattern: &IRPattern,
+    prelude: &TokenStream,
+    first: bool,
+) -> TokenStream {
     //print!("emit label pattern cost");
     match pattern {
         IRPattern::Node {
@@ -509,26 +594,40 @@ fn emit_reduce_terminals_arm(pattern: &IRPattern, prelude: &TokenStream) -> Toke
         } => {
             //println!("Node");
             let left_prelude = quote! {self.get_left_index(#prelude) };
-            let mut left = emit_reduce_terminals_arm(&*left, &left_prelude);
+            let mut left = emit_reduce_terminals_arm(&*left, &left_prelude, false);
             //println!("left: {}", left.to_string());
             if let Some(right) = right {
                 let right_prelude = quote! {self.get_right_index(#prelude) };
-                let right = emit_reduce_terminals_arm(&*right, &right_prelude);
+                let right = emit_reduce_terminals_arm(&*right, &right_prelude, false);
                 left.append_all(right)
             }
-            quote! {
+            let txt = quote! {
                 let i=#prelude as usize;
-                self.rules[i] = 0xfffe; #left
+                self.rules[i] = 0xfffe;
+            };
+            if first {
+                left
+            } else {
+                quote! {#txt #left}
             }
         }
         IRPattern::NonTerm(_, nonterm) => {
             // Challenge: Correctly reduce the members of the nonterminal
-            let nt_type = format_ident!("{}_NT", nonterm);
-            quote! {
-                let i=#prelude as usize;
-                let rule=self.instruction_states[i].rule[#nt_type];
-                self.rules[i] = rule;
-                self.reduce_terminals(i as u32,rule);
+            let _nt_type = format_ident!("{}_NT", nonterm);
+            if first {
+                quote! {
+                    //let i=#prelude as usize;
+                    //let rule=self.instruction_states[i].rule[#nt_type];
+                    //self.reduce_terminals(i as u32,rule);
+                    //self.rules[i] = rule;
+                }
+            } else {
+                quote! {
+                    //let i=#prelude as usize;
+                    //let rule=self.instruction_states[i].rule[#nt_type];
+                    //self.rules[i] = rule;
+                    //self.reduce_terminals(i as u32,rule);
+                }
             }
             //todo!()
         }
@@ -546,6 +645,7 @@ fn emit_reduce_terminals_arm(pattern: &IRPattern, prelude: &TokenStream) -> Toke
 fn emit_get_vregisters(program: &Program) -> TokenStream {
     let mut arms = TokenStream::new();
     for i in 0..program.definitions.len() {
+        let _name = &program.get_nt(i as u16);
         let arm = emit_get_vregisters_arm(&program.definitions[i].pattern, &quote! {index});
         let i = i as u16;
         arms.append_all(quote! {
@@ -566,6 +666,7 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
             match rule
             {
                 #arms
+                0xfffe => (),
                 _ => {
                     log::error!("Unsupporteded rule {}",rule);
                 }
@@ -601,10 +702,11 @@ fn emit_get_vregisters_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
             }
             left
         }
-        IRPattern::NonTerm(_, _nonterm) => {
+        IRPattern::NonTerm(_, nonterm) => {
             // Challenge: get registers from another rule here(rewrite to iterators?)
+            let nt_type = format_ident!("{}_NT", nonterm);
             quote! {
-                let rule=self.rules[#prelude as usize];
+                let rule=self.instruction_states[#prelude as usize].rule[#nt_type];
                 let index=#prelude;
                 self.get_vregisters2(index,rule,result);
             }
@@ -637,13 +739,18 @@ fn emit_asm(program: &Program) -> TokenStream {
         let definition = &program.definitions[i];
         // Does not currently handle # comments in the code. These might have to be removed later at some stage
         // At the moment all these commments are handled by the handwritten portion.
-        let template = format!("\t{}", definition.template.value());
+        let tab = match definition.name {
+            DefinitionType::NonTerm(..) => "",
+            _ => "\t",
+        };
+        let template = format!("{}{}", tab, definition.template.value());
         let arm = emit_asm_arm(&definition.pattern, &quote! {index as u32});
         let format_arm = emit_asm_format(&definition.pattern);
         let i = i as u16;
         if has_used_result(definition) {
             arms.append_all(quote! {
                 #i => {
+
                     let res=self.vreg2reg[instruction.get_result().unwrap() as usize];
                     #arm
                     format!(#template,res=res #format_arm)
@@ -662,8 +769,13 @@ fn emit_asm(program: &Program) -> TokenStream {
     quote! {
         fn gen_asm(&self,index:usize) -> String
         {
-            let instruction=&self.instructions[index];
             let rule=self.rules[index];
+            self.gen_asm2(index,rule)
+        }
+        fn gen_asm2(&self,index:usize,rule:u16) -> String
+        {
+            let instruction=&self.instructions[index];
+            log::trace!("Generating {} with rule {}",instruction,rule);
             match rule {
                 #arms
                 0xfffe => String::new(),
@@ -706,11 +818,17 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
             }
             left
         }
-        IRPattern::NonTerm(name, _) => {
+
+        IRPattern::NonTerm(name, nonterm) => {
+            //let s = name.to_string();
+            let nt_type = format_ident!("{}_NT", nonterm);
             quote! {
-                let #name=self.gen_asm(#prelude as usize);
+                let rule=self.instruction_states[#prelude as usize].rule[#nt_type];
+                let #name=self.gen_asm2(#prelude as usize,rule);
+                //log::trace!("{}-txt-{}-txt-{}",#s,#name,#s);
             }
         }
+
         IRPattern::Reg(name, _) => {
             quote! {
                 let #name=self.vreg2reg[#prelude as usize];
@@ -800,7 +918,18 @@ fn emit_is_instruction(program: &Program) -> TokenStream {
     for (definition, rule) in program.definitions.iter().zip(0u16..) {
         //let pattern = &program.definitions[index];
         //let rule = index as u16;
-        if let DefinitionType::NonTerm(_) = definition.name {
+        /*if let DefinitionType::NonTerm(_) = &definition.name {
+            if let IRPattern::NonTerm(_name, nonterm) = &definition.pattern {
+                if &nonterm.to_string() == "reg" {
+                    // Instructions that only have reg as nonterminal are effectively other instructions
+                } else {
+                    result.append_all(quote! {|#rule});
+                }
+            } else {
+                result.append_all(quote! {|#rule});
+            }
+        }*/
+        if let DefinitionType::NonTerm(_) = &definition.name {
             result.append_all(quote! {|#rule});
         }
     }

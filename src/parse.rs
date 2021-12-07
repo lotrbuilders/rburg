@@ -38,26 +38,60 @@ impl Parse for Program {
         }
 
         let mut terminals = HashMap::<String, Vec<u16>>::new();
-        for i in 0..definitions.len() {
-            let definition = &definitions[i];
+        for (definition, i) in definitions.iter().zip(0u16..) {
             match &definition.pattern {
                 IRPattern::Node { term, .. } => {
                     let term = term.to_string();
                     if !terminals.contains_key(&term) {
-                        terminals.insert(term.clone(), vec![i as u16]);
+                        terminals.insert(term.clone(), vec![i]);
                     } else {
-                        terminals.get_mut(&term).unwrap().push(i as u16);
+                        terminals.get_mut(&term).unwrap().push(i);
                     }
                 }
                 _ => (),
             }
         }
 
+        let mut nt_equivelances = HashMap::<String, Vec<u16>>::new();
+        for (definition, i) in definitions.iter().zip(0u16..) {
+            //if let DefinitionType::NonTerm(name) = &definition.name {
+            match &definition.pattern {
+                IRPattern::NonTerm(_name, nonterm) => {
+                    let nonterm = nonterm.to_string();
+                    if !nt_equivelances.contains_key(&nonterm) {
+                        nt_equivelances.insert(nonterm.clone(), vec![i]);
+                    } else {
+                        nt_equivelances.get_mut(&nonterm).unwrap().push(i);
+                    }
+                }
+                /*IRPattern::Reg(..) => {
+                    let nonterm = "reg".to_string();
+                    if !nt_equivelances.contains_key(&nonterm) {
+                        nt_equivelances.insert(nonterm.clone(), vec![i]);
+                    } else {
+                        nt_equivelances.get_mut(&nonterm).unwrap().push(i);
+                    }
+                }*/
+                _ => (),
+            }
+            //}
+        }
+
+        let non_terminals = definitions
+            .iter()
+            .filter_map(|def| match &def.name {
+                DefinitionType::NonTerm(name) => Some(name.to_string()),
+                _ => None,
+            })
+            .collect();
+
         Ok(Program {
             implements,
             definitions,
             span,
             terminals,
+            non_terminals,
+            nt_equivelances,
         })
     }
 }
@@ -109,6 +143,7 @@ impl Parse for IRPattern {
             return Ok(IRPattern::Const(name));
         }
         let term = input.parse::<Ident>()?;
+
         match term.to_string().chars().next().unwrap() {
             // If it starts with a capital letter it must be a terminal
             'A'..='Z' => {

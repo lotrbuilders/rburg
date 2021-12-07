@@ -4,6 +4,7 @@ use syn::Error;
 
 use crate::*;
 
+// Check for reg vs %ireg
 pub(super) trait Checkable {
     fn check(&self, span: &Span) -> Result<(), TokenStream>;
 }

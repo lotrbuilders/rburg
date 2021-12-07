@@ -3,7 +3,7 @@ mod emit;
 mod fmt;
 mod parse;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
@@ -17,17 +17,20 @@ struct Program {
     definitions: Vec<Definition>,
     span: Vec<Span>,
     terminals: HashMap<String, Vec<u16>>,
+    nt_equivelances: HashMap<String, Vec<u16>>,
+    non_terminals: HashSet<String>,
 }
 
 impl Program {
     fn get_nt(&self, index: u16) -> Ident {
         match &self.definitions[index as usize].name {
-            DefinitionType::Reg(_) => format_ident!("reg_NT"),
             DefinitionType::NonTerm(ident) => format_ident!("{}_NT", ident),
+            DefinitionType::Reg(_) => format_ident!("reg_NT"),
             DefinitionType::Stmt => format_ident!("stmt_NT"),
         }
     }
 }
+
 struct Definition {
     name: DefinitionType,
     pattern: IRPattern,
@@ -40,6 +43,16 @@ enum DefinitionType {
     Reg(Ident),
     NonTerm(Ident),
     Stmt,
+}
+
+impl Definition {
+    fn get_equivelance(&self) -> Ident {
+        match &self.name {
+            DefinitionType::NonTerm(ident) => format_ident!("label_equivelance_{}", ident),
+            DefinitionType::Reg(_) => format_ident!("label_equivelance_reg"),
+            DefinitionType::Stmt => format_ident!("label_equivelance_stmt"),
+        }
+    }
 }
 
 enum IRPattern {
