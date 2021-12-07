@@ -10,10 +10,10 @@ This module parses the program description in the rburg-DSL given to the backend
                 | ()
 
 <definition>
-    (%reg|!non-term!|<empty>): <tree> template {<rust-code>}
+    (%reg|non-term|<empty>): <tree> template {<rust-code>}
 <tree>:
     | <term> [<size>] [ '(' <tree> [ , <tree> ] ')' ]
-    | !<name> <non-term>!
+    | <name> <non-term>
     | <name> '%'<reg>
     | '#' <name>
 
@@ -91,6 +91,8 @@ impl Parse for DefinitionType {
         let result = if input.peek(Token![%]) {
             input.parse::<Token![%]>()?;
             Ok(DefinitionType::Reg(input.parse()?))
+        } else if input.peek(Ident) {
+            Ok(DefinitionType::NonTerm(input.parse()?))
         } else {
             Ok(DefinitionType::Stmt)
         };
@@ -140,7 +142,7 @@ impl Parse for IRPattern {
                     input.parse::<Token![%]>()?;
                     Ok(IRPattern::Reg(name, input.parse()?))
                 } else {
-                    Err(input.error("Expected # or %reg"))
+                    Ok(IRPattern::NonTerm(name, input.parse()?))
                 }
             }
         }

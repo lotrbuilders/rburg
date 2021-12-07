@@ -61,7 +61,10 @@ impl Checkable for IRPattern {
                         Err(Error::new(*span, "Imm and AddrL expect constants").to_compile_error())
                     }
 
-                    ("Load", IRPattern::Reg(..) | IRPattern::Node { .. }) => Ok(()),
+                    (
+                        "Load",
+                        IRPattern::Reg(..) | IRPattern::Node { .. } | IRPattern::NonTerm(..),
+                    ) => Ok(()),
                     ("Load", _) => {
                         Err(Error::new(*span, "Load expects pattern or register")
                             .to_compile_error())
@@ -69,7 +72,7 @@ impl Checkable for IRPattern {
 
                     (
                         "Ret" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Mul" | "Div",
-                        IRPattern::Reg(..) | IRPattern::Node { .. },
+                        IRPattern::Reg(..) | IRPattern::Node { .. } | IRPattern::NonTerm(..),
                     ) => Ok(()),
                     ("Ret" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Mul" | "Div", _) => {
                         Err(Error::new(*span, "Unexpected constant").to_compile_error())
@@ -88,7 +91,7 @@ impl Checkable for IRPattern {
                     }
                     (
                         "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Mul" | "Div",
-                        Some(IRPattern::Reg(..) | IRPattern::Node { .. }),
+                        Some(IRPattern::Reg(..) | IRPattern::Node { .. } | IRPattern::NonTerm(..)),
                     ) => Ok(()),
                     ("Store" | "Add" | "Sub" | "Xor" | "Eq" | "Mul" | "Div", Some(_)) => {
                         Err(Error::new(*span, "Unexpected constant").to_compile_error())
@@ -114,7 +117,8 @@ impl Checkable for IRPattern {
 
                 Ok(())
             }
-            IRPattern::Reg(_, _) | IRPattern::Const(_) => Ok(()),
+            IRPattern::NonTerm(_, _nonterm) => Ok(()),
+            IRPattern::Reg(..) | IRPattern::Const(_) => Ok(()),
         }
     }
 }

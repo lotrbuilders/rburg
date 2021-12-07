@@ -38,7 +38,8 @@ impl Display for DefinitionType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use DefinitionType::*;
         match self {
-            Reg(name) => write!(f, "{}", name)?,
+            Reg(name) => write!(f, "%{}", name)?,
+            NonTerm(name) => write!(f, "{}", name)?,
             Stmt => (),
         }
         Ok(())
@@ -65,6 +66,7 @@ impl Display for IRPattern {
                 }
                 write!(f, ")")?;
             }
+            NonTerm(name, nonterm) => write!(f, "{} %{}", name, nonterm)?,
             Reg(name, class) => write!(f, "{} %{}", name, class)?,
             Const(name) => write!(f, "#{}", name)?,
         }

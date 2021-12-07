@@ -21,8 +21,9 @@ struct Program {
 
 impl Program {
     fn get_nt(&self, index: u16) -> Ident {
-        match self.definitions[index as usize].name {
+        match &self.definitions[index as usize].name {
             DefinitionType::Reg(_) => format_ident!("reg_NT"),
+            DefinitionType::NonTerm(ident) => format_ident!("{}_NT", ident),
             DefinitionType::Stmt => format_ident!("stmt_NT"),
         }
     }
@@ -37,6 +38,7 @@ struct Definition {
 
 enum DefinitionType {
     Reg(Ident),
+    NonTerm(Ident),
     Stmt,
 }
 
@@ -48,7 +50,7 @@ enum IRPattern {
         right: Option<Box<IRPattern>>,
     },
     Reg(Ident, Ident),
-    //NonTerm(Ident, Ident),
+    NonTerm(Ident, Ident),
     Const(Ident),
 }
 
