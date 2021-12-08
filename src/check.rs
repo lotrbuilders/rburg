@@ -72,12 +72,16 @@ impl Checkable for IRPattern {
                     }
 
                     (
-                        "Ret" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Mul" | "Div",
+                        "Ret" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt"
+                        | "Ge" | "Mul" | "Div",
                         IRPattern::Reg(..) | IRPattern::Node { .. } | IRPattern::NonTerm(..),
                     ) => Ok(()),
-                    ("Ret" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Mul" | "Div", _) => {
-                        Err(Error::new(*span, "Unexpected constant").to_compile_error())
-                    }
+
+                    (
+                        "Ret" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt"
+                        | "Ge" | "Mul" | "Div",
+                        _,
+                    ) => Err(Error::new(*span, "Unexpected constant").to_compile_error()),
 
                     (string, _) => {
                         Err(Error::new(*span, &format!("Unknown patern {}", string))
@@ -90,16 +94,25 @@ impl Checkable for IRPattern {
                     ("Imm" | "AddrL" | "Load" | "Ret", _) => {
                         Err(Error::new(*span, "Unexpected right side in tree").to_compile_error())
                     }
+
                     (
-                        "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Mul" | "Div",
+                        "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt" | "Ge"
+                        | "Mul" | "Div",
                         Some(IRPattern::Reg(..) | IRPattern::Node { .. } | IRPattern::NonTerm(..)),
                     ) => Ok(()),
-                    ("Store" | "Add" | "Sub" | "Xor" | "Eq" | "Mul" | "Div", Some(_)) => {
-                        Err(Error::new(*span, "Unexpected constant").to_compile_error())
-                    }
-                    ("Store" | "Add" | "Sub" | "Xor" | "Eq" | "Mul" | "Div", None) => {
-                        Err(Error::new(*span, "Expected left side").to_compile_error())
-                    }
+
+                    (
+                        "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt" | "Ge"
+                        | "Mul" | "Div",
+                        Some(_),
+                    ) => Err(Error::new(*span, "Unexpected constant").to_compile_error()),
+
+                    (
+                        "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt" | "Ge"
+                        | "Mul" | "Div",
+                        None,
+                    ) => Err(Error::new(*span, "Expected left side").to_compile_error()),
+
                     _ => unreachable!(),
                 }?;
 

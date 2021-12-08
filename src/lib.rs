@@ -73,7 +73,8 @@ fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
     let str = match &ident.to_string() as &str {
         "AddrL" => "P",
 
-        "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Eq" => "I32",
+        "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt"
+        | "Ge" => "I32",
 
         "Mul" | "Div" => "S32",
 
