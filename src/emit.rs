@@ -645,19 +645,30 @@ fn emit_reduce_terminals_arm(
 fn emit_get_vregisters(program: &Program) -> TokenStream {
     let mut arms = TokenStream::new();
     for i in 0..program.definitions.len() {
-        let _name = &program.get_nt(i as u16);
         let arm = emit_get_vregisters_arm(&program.definitions[i].pattern, &quote! {index});
         let i = i as u16;
         arms.append_all(quote! {
             #i => {#arm}
         });
     }
+
+    let mut result_arm = TokenStream::new();
+    for i in 0..program.definitions.len() {
+        if let DefinitionType::Reg(class) = &program.definitions[i].name {
+            let i = i as u16;
+            let class = format_ident!("REG_CLASS_{}", class.to_string().to_uppercase());
+            result_arm.append_all(quote! {
+                #i => Some((self.instructions[index as usize].get_result().unwrap(),&#class)),
+            });
+        }
+    }
     quote! {
-        fn get_vregisters(&self,index:u32,rule:u16) -> (Vec<(u32,&'static RegisterClass)>,Option<u32>)
+
+        fn get_vregisters(&self,index:u32,rule:u16) -> (Vec<(u32,&'static RegisterClass)>,Option<(u32,&'static RegisterClass)>)
         {
             let mut used_vregs=Vec::with_capacity(4);
             self.get_vregisters2(index, rule, &mut used_vregs);
-            let result_vreg=self.instructions[index as usize].get_result();
+            let result_vreg=self.has_result(index,rule);
             (used_vregs,result_vreg)
         }
 
@@ -671,7 +682,14 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
                     log::error!("Unsupporteded rule {}",rule);
                 }
             };
+        }
 
+        fn has_result(&self,index:u32,rule:u16)-> Option<(u32,&'static RegisterClass)>{
+            match rule
+            {
+                #result_arm
+                _ => None,
+            }
         }
     }
 }
