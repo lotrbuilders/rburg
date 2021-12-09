@@ -193,8 +193,12 @@ fn emit_label(program: &Program) -> TokenStream {
             match instruction {
                 &IRInstruction::Imm(_, _, value) => format!("{}", value),
                 &IRInstruction::AddrL(_,_,i) => format!("{}", self.local_offsets[i]),
+                &IRInstruction::Jcc(..,i) => format!("{}", i),
+                &IRInstruction::Jnc(..,i) => format!("{}", i),
+                &IRInstruction::Jmp(i) => format!("{}", i),
+                &IRInstruction::Label(i) => format!("{}", i),
                 _ => {
-                    log::error!("get value called without value");
+                    log::error!("Get value called without value");
                     format!("")
                 }
             }
