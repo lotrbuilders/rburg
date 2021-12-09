@@ -57,8 +57,8 @@ impl Checkable for IRPattern {
                 let right = right.as_ref().clone().map(|f| &**f);
 
                 match (&term.to_string() as &str, left) {
-                    ("Imm" | "AddrL", IRPattern::Const(_)) => Ok(()),
-                    ("Imm" | "AddrL", _) => {
+                    ("Imm" | "AddrL" | "Label" | "Jmp", IRPattern::Const(_)) => Ok(()),
+                    ("Imm" | "AddrL" | "Label" | "Jmp", _) => {
                         Err(Error::new(*span, "Imm and AddrL expect constants").to_compile_error())
                     }
 
@@ -73,13 +73,13 @@ impl Checkable for IRPattern {
 
                     (
                         "Ret" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt"
-                        | "Ge" | "Mul" | "Div",
+                        | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc",
                         IRPattern::Reg(..) | IRPattern::Node { .. } | IRPattern::NonTerm(..),
                     ) => Ok(()),
 
                     (
                         "Ret" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt"
-                        | "Ge" | "Mul" | "Div",
+                        | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc",
                         _,
                     ) => Err(Error::new(*span, "Unexpected constant").to_compile_error()),
 
@@ -90,8 +90,8 @@ impl Checkable for IRPattern {
                 }?;
 
                 match (&term.to_string() as &str, right) {
-                    ("Imm" | "AddrL" | "Load" | "Ret", None) => Ok(()),
-                    ("Imm" | "AddrL" | "Load" | "Ret", _) => {
+                    ("Imm" | "AddrL" | "Load" | "Ret" | "Label" | "Jmp", None) => Ok(()),
+                    ("Imm" | "AddrL" | "Load" | "Ret" | "Label" | "Jmp", _) => {
                         Err(Error::new(*span, "Unexpected right side in tree").to_compile_error())
                     }
 
@@ -111,14 +111,20 @@ impl Checkable for IRPattern {
                         "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt" | "Ge"
                         | "Mul" | "Div",
                         None,
-                    ) => Err(Error::new(*span, "Expected left side").to_compile_error()),
+                    ) => Err(Error::new(*span, "Expected right side").to_compile_error()),
+
+                    ("Jcc" | "Jnc", Some(IRPattern::Const(..))) => Ok(()),
+
+                    ("Jcc" | "Jnc", _) => {
+                        Err(Error::new(*span, "Expected right side constant").to_compile_error())
+                    }
 
                     _ => unreachable!(),
                 }?;
 
                 if let Some(size) = size {
                     match &size.to_string() as &str {
-                        "p" | "i32" | "I32" | "s32" | "S32" => Ok(()),
+                        "p" | "P" | "i32" | "I32" | "s32" | "S32" => Ok(()),
                         string => Err(Error::new(*span, &format!("Unknown patern {}", string))
                             .to_compile_error()),
                     }?;
