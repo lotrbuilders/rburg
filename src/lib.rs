@@ -74,13 +74,16 @@ fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
         "AddrL" | "Jmp" | "Label" => "P",
 
         "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Eq" | "Ne" | "Lt" | "Le" | "Gt"
-        | "Ge" => "I32",
+        | "Ge" | "Jcc" | "Jnc" => "I32",
 
         "Mul" | "Div" => "S32",
 
         _ => {
-            result.append_all(quote! {compile_error!("Unsupported operation for default size");});
-            " "
+            use syn::Error;
+            result.append_all(
+                Error::new(ident.span(), "Unsupported default size for").to_compile_error(),
+            );
+            "unknown"
         }
     };
     let ident = format_ident!("{}", str);
