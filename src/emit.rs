@@ -37,7 +37,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
             rules : Vec<u16>,
             non_terminals: [Vec<usize>;#rule_count],
 
-            vreg2reg: Vec<Register>,
+            vreg2reg: Vec<RegisterLocation>,
             reg_relocations: Vec<Vec<RegisterRelocation>>,
 
             local_offsets: Vec<i32>,
@@ -855,7 +855,7 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
 
         IRPattern::Reg(name, _) => {
             quote! {
-                let #name=self.vreg2reg[#prelude as usize];
+                let #name=self.vreg2reg[#prelude as usize].reg().unwrap();
             }
         }
 
