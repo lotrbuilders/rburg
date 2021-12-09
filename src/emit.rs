@@ -197,6 +197,8 @@ fn emit_label(program: &Program) -> TokenStream {
                 &IRInstruction::Jnc(..,i) => format!("{}", i),
                 &IRInstruction::Jmp(i) => format!("{}", i),
                 &IRInstruction::Label(i) => format!("{}", i),
+                IRInstruction::Phi(phi) => format!("{}",phi),
+                &IRInstruction::PhiSrc(label) => format!("phisrc L{}",label),
                 _ => {
                     log::error!("Get value called without value");
                     format!("")
