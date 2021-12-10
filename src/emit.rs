@@ -37,7 +37,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
             rules : Vec<u16>,
             non_terminals: [Vec<usize>;#rule_count],
 
-            vreg2reg: Vec<RegisterLocation>,
+            allocation: Vec<RegisterAllocation>,
             reg_relocations: Vec<Vec<RegisterRelocation>>,
 
             local_offsets: Vec<i32>,
@@ -64,7 +64,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     rules: Vec::new(),
                     non_terminals: #non_terminals,
 
-                    vreg2reg: Vec::new(),
+                    allocation: Vec::new(),
                     reg_relocations: Vec::new(),
 
                     local_offsets: Vec::new(),
@@ -196,7 +196,7 @@ fn emit_label(program: &Program) -> TokenStream {
                 &IRInstruction::Jcc(..,i) => format!("{}", i),
                 &IRInstruction::Jnc(..,i) => format!("{}", i),
                 &IRInstruction::Jmp(i) => format!("{}", i),
-                &IRInstruction::Label(i) => format!("{}", i),
+                &IRInstruction::Label(_,i) => format!("{}", i),
                 IRInstruction::Phi(phi) => format!("{}",phi),
                 &IRInstruction::PhiSrc(label) => format!("phisrc L{}",label),
                 _ => {
@@ -775,7 +775,7 @@ fn emit_asm(program: &Program) -> TokenStream {
             arms.append_all(quote! {
                 #i => {
 
-                    let res=self.vreg2reg[instruction.get_result().unwrap() as usize];
+                    let res=self.allocation[instruction.get_result().unwrap() as usize][index];
                     #arm
                     format!(#template,res=res #format_arm)
                 }
@@ -855,7 +855,7 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
 
         IRPattern::Reg(name, _) => {
             quote! {
-                let #name=self.vreg2reg[#prelude as usize].reg().unwrap();
+                let #name=self.allocation[#prelude as usize][index].reg().unwrap();
             }
         }
 
