@@ -462,6 +462,14 @@ fn emit_get_child(program: &Program) -> TokenStream {
         fn get_kids(&self,index:u32,rule_number:u16) -> Vec<u32>
         {
             //log::trace!("Get kids of {} with rule {}",index,rule_number);
+            if let IRInstruction::Label(Some(phi),_) = &self.instructions[index as usize] {
+                let result=phi.sources.iter().
+                    flat_map(|src| src.iter()).
+                    map(|r| self.definition_index[*r as usize]).
+                    collect();
+                log::debug!("Get kids of phi node {}, {:?}",index,result);
+                return result
+            }
             match rule_number {
                 #arms
                 _ => {
@@ -471,8 +479,12 @@ fn emit_get_child(program: &Program) -> TokenStream {
             }
         }
 
-        fn get_child_non_terminals(&self,rule_number:u16) -> Vec<usize>
+        fn get_child_non_terminals(&self,index:u32,rule_number:u16) -> Vec<usize>
         {
+            if let IRInstruction::Label(Some(phi),_) = &self.instructions[index as usize] {
+                let length=phi.sources.len()*phi.sources.get(0).map(|v| v.len()).unwrap_or(0);
+                return vec![reg_NT;length];
+            }
             //log::trace!("Get non_terminals of rule {}",rule_number);
             match rule_number {
                 0xffff => {
@@ -691,6 +703,9 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
         }
 
         fn has_result(&self,index:u32,rule:u16)-> Option<(u32,&'static RegisterClass)>{
+            if let IRInstruction::Label(Some(_),_) = self.instructions[index as usize] {
+                return None;
+            }
             match rule
             {
                 #result_arm
