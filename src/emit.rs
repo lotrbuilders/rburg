@@ -391,7 +391,7 @@ fn emit_label_equivelances(program: &Program) -> TokenStream {
     for non_terminal in program
         .non_terminals
         .iter()
-        .chain(vec!["reg".to_string(), "stmt".to_string()].iter())
+        .chain(vec![/*"reg".to_string(),*/ "stmt".to_string()].iter())
     {
         let empty = Vec::<u16>::new();
         let equivelances = program
@@ -415,6 +415,18 @@ fn emit_label_equivelances(program: &Program) -> TokenStream {
             }
         });
     }
+    result.append_all(quote! {
+        fn label_equivelance_reg(&mut self,index:usize,cost:u16)
+        {
+            let  state = &mut self.instruction_states[index];
+            let cost = cost + 1000;
+            if(cost<state.cost[stmt_NT] )
+            {
+                state.cost[stmt_NT]=cost;
+                state.rule[stmt_NT]=state.rule[reg_NT];
+            }
+        }
+    });
     result
 }
 
