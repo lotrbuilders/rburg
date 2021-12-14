@@ -57,8 +57,10 @@ impl Checkable for IRPattern {
                 let right = right.as_ref().clone().map(|f| &**f);
 
                 match (&term.to_string() as &str, left) {
-                    ("Imm" | "AddrL" | "Label" | "Jmp" | "Call", IRPattern::Const(_)) => Ok(()),
-                    ("Imm" | "AddrL" | "Label" | "Jmp" | "Call", _) => {
+                    ("Imm" | "AddrL" | "AddrG" | "Label" | "Jmp" | "Call", IRPattern::Const(_)) => {
+                        Ok(())
+                    }
+                    ("Imm" | "AddrL" | "AddrG" | "Label" | "Jmp" | "Call", _) => {
                         Err(Error::new(*span, "Expected constants").to_compile_error())
                     }
 
@@ -90,8 +92,11 @@ impl Checkable for IRPattern {
                 }?;
 
                 match (&term.to_string() as &str, right) {
-                    ("Imm" | "AddrL" | "Load" | "Ret" | "Label" | "Jmp" | "Call", None) => Ok(()),
-                    ("Imm" | "AddrL" | "Load" | "Ret" | "Label" | "Jmp" | "Call", _) => {
+                    (
+                        "Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Label" | "Jmp" | "Call",
+                        None,
+                    ) => Ok(()),
+                    ("Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Label" | "Jmp" | "Call", _) => {
                         Err(Error::new(*span, "Unexpected right side in tree").to_compile_error())
                     }
 

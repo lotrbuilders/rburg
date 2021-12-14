@@ -71,7 +71,7 @@ fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
     use quote::quote;
     let mut result = proc_macro2::TokenStream::new();
     let str = match &ident.to_string() as &str {
-        "AddrL" | "Jmp" | "Label" => "P",
+        "AddrL" | "AddrG" | "Jmp" | "Label" => "P",
 
         "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt"
         | "Le" | "Gt" | "Ge" | "Jcc" | "Jnc" => "I32",
