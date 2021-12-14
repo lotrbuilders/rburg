@@ -708,8 +708,16 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
 
         fn get_vregisters(&self,index:u32,rule:u16) -> (Vec<(u32,&'static RegisterClass)>,Option<(u32,&'static RegisterClass)>)
         {
-            let mut used_vregs=Vec::with_capacity(4);
-            self.get_vregisters2(index, rule, &mut used_vregs);
+            let used_vregs=if let IRInstruction::Call(_,_,_,arguments) = &self.instructions[index as usize] {
+                let used_vregs = arguments.arguments.clone();
+                let used_classes = self.get_call_regs(&arguments.sizes);
+                used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect()
+            } else {
+                let mut used_vregs=Vec::with_capacity(4);
+                self.get_vregisters2(index, rule, &mut used_vregs);
+                used_vregs
+            };
+
             let result_vreg=self.has_result(index,rule);
             (used_vregs,result_vreg)
         }
