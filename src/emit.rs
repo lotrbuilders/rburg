@@ -197,6 +197,7 @@ fn emit_label(program: &Program) -> TokenStream {
                 &IRInstruction::Jnc(..,i) => format!("{}", i),
                 &IRInstruction::Jmp(i) => format!("{}", i),
                 &IRInstruction::Label(_,i) => format!("{}", i),
+                &IRInstruction::Call(..,name,_) => format!("{}", name),
                 IRInstruction::Phi(phi) => format!("{}",phi),
                 &IRInstruction::PhiSrc(label) => format!("phisrc L{}",label),
                 _ => {
@@ -482,6 +483,13 @@ fn emit_get_child(program: &Program) -> TokenStream {
                 log::debug!("Get kids of phi node {}, {:?}",index,result);
                 return result
             }
+            else if if let IRInstruction::Call(..,arguments) = &self.instructions[index as usize] {
+                let result=arguments.arguments.iter()
+                    .map(|r| self.definition_index[*r as usize]).
+                    .collect();
+                log::debug!("Get kids of call {}, {:?}",index,result);
+                return result
+            }
             match rule_number {
                 #arms
                 _ => {
@@ -495,6 +503,10 @@ fn emit_get_child(program: &Program) -> TokenStream {
         {
             if let IRInstruction::Label(Some(phi),_) = &self.instructions[index as usize] {
                 let length=phi.sources.len()*phi.sources.get(0).map(|v| v.len()).unwrap_or(0);
+                return vec![reg_NT;length];
+            }
+            else if let IRInstruction::Call(..,arguments) = &self.instructions[index as usize] {
+                let length=arguments.arguments.len();
                 return vec![reg_NT;length];
             }
             //log::trace!("Get non_terminals of rule {}",rule_number);

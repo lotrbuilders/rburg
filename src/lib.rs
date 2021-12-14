@@ -76,7 +76,7 @@ fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
         "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt"
         | "Le" | "Gt" | "Ge" | "Jcc" | "Jnc" => "I32",
 
-        "Mul" | "Div" => "S32",
+        "Mul" | "Div" | "Call" => "S32",
 
         _ => {
             use syn::Error;
