@@ -197,7 +197,7 @@ fn emit_label(program: &Program) -> TokenStream {
                 &IRInstruction::Jnc(..,i) => format!("{}", i),
                 &IRInstruction::Jmp(i) => format!("{}", i),
                 &IRInstruction::Label(_,i) => format!("{}", i),
-                &IRInstruction::Call(..,name,_) => format!("{}", name),
+                IRInstruction::Call(..,name,_) => format!("{}", name),
                 IRInstruction::Phi(phi) => format!("{}",phi),
                 &IRInstruction::PhiSrc(label) => format!("phisrc L{}",label),
                 _ => {
@@ -483,9 +483,9 @@ fn emit_get_child(program: &Program) -> TokenStream {
                 log::debug!("Get kids of phi node {}, {:?}",index,result);
                 return result
             }
-            else if if let IRInstruction::Call(..,arguments) = &self.instructions[index as usize] {
+            else if let IRInstruction::Call(..,arguments) = &self.instructions[index as usize] {
                 let result=arguments.arguments.iter()
-                    .map(|r| self.definition_index[*r as usize]).
+                    .map(|r| self.definition_index[*r as usize])
                     .collect();
                 log::debug!("Get kids of call {}, {:?}",index,result);
                 return result
