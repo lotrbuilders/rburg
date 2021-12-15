@@ -74,14 +74,14 @@ impl Checkable for IRPattern {
                     }
 
                     (
-                        "Ret" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt"
-                        | "Le" | "Gt" | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc",
+                        "Ret" | "Arg" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq"
+                        | "Ne" | "Lt" | "Le" | "Gt" | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc",
                         IRPattern::Reg(..) | IRPattern::Node { .. } | IRPattern::NonTerm(..),
                     ) => Ok(()),
 
                     (
-                        "Ret" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt"
-                        | "Le" | "Gt" | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc",
+                        "Ret" | "Arg" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq"
+                        | "Ne" | "Lt" | "Le" | "Gt" | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc",
                         _,
                     ) => Err(Error::new(*span, "Unexpected constant").to_compile_error()),
 
@@ -93,12 +93,15 @@ impl Checkable for IRPattern {
 
                 match (&term.to_string() as &str, right) {
                     (
-                        "Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Label" | "Jmp" | "Call",
+                        "Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Arg" | "Label" | "Jmp"
+                        | "Call",
                         None,
                     ) => Ok(()),
-                    ("Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Label" | "Jmp" | "Call", _) => {
-                        Err(Error::new(*span, "Unexpected right side in tree").to_compile_error())
-                    }
+                    (
+                        "Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Arg" | "Label" | "Jmp"
+                        | "Call",
+                        _,
+                    ) => Err(Error::new(*span, "Unexpected right side in tree").to_compile_error()),
 
                     (
                         "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt" | "Le"

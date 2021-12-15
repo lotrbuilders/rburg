@@ -74,7 +74,7 @@ fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
         "AddrL" | "AddrG" | "Jmp" | "Label" => "P",
 
         "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt"
-        | "Le" | "Gt" | "Ge" | "Jcc" | "Jnc" => "I32",
+        | "Le" | "Gt" | "Ge" | "Jcc" | "Jnc" | "Arg" => "I32",
 
         "Mul" | "Div" | "Call" => "S32",
 
