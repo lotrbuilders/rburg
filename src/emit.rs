@@ -32,6 +32,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
             instructions: Vec<IRInstruction>,
             definition_index: Vec<u32>,
             use_count: Vec<u32>,
+            arguments: IRArguments,
 
             instruction_states:Vec<State>,
             rules : Vec<u16>,
@@ -59,6 +60,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     instructions: Vec::new(),
                     definition_index: Vec::new(),
                     use_count: Vec::new(),
+                    arguments: IRArguments{sizes:Vec::new(),arguments:Vec::new(),count:0},
 
                     instruction_states: Vec::new(),
                     rules: Vec::new(),
@@ -485,7 +487,8 @@ fn emit_get_child(program: &Program) -> TokenStream {
             }
             else if let IRInstruction::Call(..,arguments) = &self.instructions[index as usize] {
                 let result=arguments.arguments.iter()
-                    .map(|r| self.definition_index[*r as usize])
+                    .map(|r| r.unwrap())
+                    .map(|r| self.definition_index[r as usize])
                     .collect();
                 log::debug!("Get kids of call {}, {:?}",index,result);
                 return result
@@ -709,7 +712,7 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
         fn get_vregisters(&self,index:u32,rule:u16) -> (Vec<(u32,&'static RegisterClass)>,Option<(u32,&'static RegisterClass)>)
         {
             let used_vregs=if let IRInstruction::Call(_,_,_,arguments) = &self.instructions[index as usize] {
-                let used_vregs = arguments.arguments.clone();
+                let used_vregs = arguments.arguments.iter().map(|r| r.unwrap()).collect::<Vec<u32>>();
                 let used_classes = self.get_call_regs(&arguments.sizes);
                 used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect()
             } else {
