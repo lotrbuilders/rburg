@@ -826,7 +826,7 @@ fn emit_asm(program: &Program) -> TokenStream {
             arms.append_all(quote! {
                 #i => {
 
-                    let res=self.allocation[instruction.get_result().unwrap() as usize][index];
+                    let res=self.allocation[instruction.get_result().unwrap() as usize][index].unwrap();
                     #arm
                     format!(#template,res=res #format_arm)
                 }
@@ -906,7 +906,7 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
 
         IRPattern::Reg(name, _) => {
             quote! {
-                let #name=self.allocation[#prelude as usize][index].reg().unwrap();
+                let #name=self.allocation[#prelude as usize][index].unwrap();
             }
         }
 
