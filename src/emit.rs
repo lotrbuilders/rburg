@@ -193,15 +193,16 @@ fn emit_label(program: &Program) -> TokenStream {
         fn get_value(&self, instruction:u32) -> String {
             let instruction = &self.instructions[instruction as usize];
             match instruction {
-                &IRInstruction::Imm(_, _, value) => format!("{}", value),
+                IRInstruction::Imm(_, _, value) => format!("{}", value),
                 &IRInstruction::AddrL(_,_,i) => format!("{}", self.local_offsets[i]),
-                &IRInstruction::Jcc(..,i) => format!("{}", i),
-                &IRInstruction::Jnc(..,i) => format!("{}", i),
-                &IRInstruction::Jmp(i) => format!("{}", i),
-                &IRInstruction::Label(_,i) => format!("{}", i),
+                IRInstruction::AddrG(_,_,name) => format!("{}", name),
+                IRInstruction::Jcc(..,i) => format!("{}", i),
+                IRInstruction::Jnc(..,i) => format!("{}", i),
+                IRInstruction::Jmp(i) => format!("{}", i),
+                IRInstruction::Label(_,i) => format!("{}", i),
                 IRInstruction::Call(..,name,_) => format!("{}", name),
                 IRInstruction::Phi(phi) => format!("{}",phi),
-                &IRInstruction::PhiSrc(label) => format!("phisrc L{}",label),
+                IRInstruction::PhiSrc(label) => format!("phisrc L{}",label),
                 _ => {
                     log::error!("Get value called without value");
                     format!("")
