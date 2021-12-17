@@ -818,7 +818,7 @@ fn emit_get_vregisters_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
 
 fn has_used_result(definition: &Definition) -> bool {
     if let DefinitionType::Reg(..) = definition.name {
-        if definition.template.value().contains("{res}") {
+        if definition.template.value().contains("{res") {
             return true;
         }
     }
