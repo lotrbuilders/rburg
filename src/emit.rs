@@ -329,7 +329,7 @@ fn emit_label_pattern_condition(
                 )
             }
             let check_size = quote! {
-                (#check_size true)
+                (#check_size false)
             };
 
             let left_prelude = quote! {self.get_left_index(#prelude) };
