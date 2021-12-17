@@ -135,6 +135,7 @@ fn emit_label(program: &Program) -> TokenStream {
             //log::trace!("Labeling instruction {}",index);
             let state = State::new();
             let ins = self.instructions[index as usize].clone();
+            let size = ins.get_size();
             if self.instruction_states[index as usize].labeled
             {
                 //log::trace!("Instruction {} already labeled",index);
@@ -309,10 +310,27 @@ fn emit_label_pattern_condition(
             right,
         } => {
             //println!("Node");
+            let span = size
+                .as_ref()
+                .map(|s| s.span())
+                .unwrap_or_else(|| term.span());
+
             let size = size
-                .clone()
-                .map(|id| quote!(#id))
+                .as_ref()
+                .map(|id| id.to_string())
                 .unwrap_or_else(|| get_default_size(term));
+
+            let ir_sizes = split_size(&size);
+            let mut check_size = TokenStream::new();
+            for size in ir_sizes {
+                let size = format_ident!("{}", size, span = span);
+                check_size.append_all(
+                    quote! {self.instructions[#prelude as usize].get_size()==IRSize::#size||},
+                )
+            }
+            let check_size = quote! {
+                (#check_size true)
+            };
 
             let left_prelude = quote! {self.get_left_index(#prelude) };
             let mut left = emit_label_pattern_condition(&*left, &left_prelude, false);
@@ -330,7 +348,7 @@ fn emit_label_pattern_condition(
             };
             quote! {
                 self.instructions[#prelude as usize].to_type()==IRType::#term
-                && self.instructions[#prelude as usize].get_size()==IRSize::#size
+                && #check_size
                 #check_use_count
                 && #left
             }

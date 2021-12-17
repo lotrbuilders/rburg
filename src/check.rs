@@ -131,11 +131,13 @@ impl Checkable for IRPattern {
                 }?;
 
                 if let Some(size) = size {
-                    match &size.to_string() as &str {
-                        "p" | "P" | "i32" | "I32" | "s32" | "S32" => Ok(()),
-                        string => Err(Error::new(*span, &format!("Unknown patern {}", string))
-                            .to_compile_error()),
-                    }?;
+                    for s in split_size(&size.to_string()) {
+                        match &s as &str {
+                            "p" | "P" | "i32" | "I32" | "s32" | "S32" => Ok(()),
+                            string => Err(Error::new(*span, &format!("Unknown patern {}", string))
+                                .to_compile_error()),
+                        }?;
+                    }
                 }
 
                 left.check(span)?;

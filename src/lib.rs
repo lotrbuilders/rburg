@@ -67,10 +67,8 @@ enum IRPattern {
     Const(Ident),
 }
 
-fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
-    use quote::quote;
-    let mut result = proc_macro2::TokenStream::new();
-    let str = match &ident.to_string() as &str {
+fn get_default_size(ident: &Ident) -> String {
+    String::from(match &ident.to_string() as &str {
         "AddrL" | "AddrG" | "Jmp" | "Label" => "P",
 
         "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt"
@@ -78,17 +76,30 @@ fn get_default_size(ident: &Ident) -> proc_macro2::TokenStream {
 
         "Mul" | "Div" | "Call" => "S32",
 
-        _ => {
-            use syn::Error;
-            result.append_all(
-                Error::new(ident.span(), "Unsupported default size for").to_compile_error(),
-            );
-            "unknown"
+        _ => "unknown",
+    })
+}
+
+fn split_size(size: &String) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut string = String::new();
+    for ch in size.chars() {
+        if ch.is_ascii_alphabetic() && !string.is_empty() {
+            process_size(&mut result, &mut string)
         }
-    };
-    let ident = format_ident!("{}", str);
-    result.append_all(quote!(#ident));
+        string.push(ch);
+    }
+    process_size(&mut result, &mut string);
     result
+}
+
+fn process_size(result: &mut Vec<String>, string: &mut String) {
+    let temp: String = string.drain(0..).collect();
+    if temp.starts_with('i') {
+        result.push(temp.replace('i', "s"));
+    } else {
+        result.push(temp);
+    }
 }
 
 // This macro generates the entire backend given in the rburg-DSL
