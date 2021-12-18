@@ -98,8 +98,6 @@ fn process_size(result: &mut Vec<String>, string: &mut String) {
     if temp.starts_with('I') {
         result.push(temp.replace('I', "S"));
     } else {
-        println!("{} does not start with i", temp);
-        eprintln!("{} does not start with i", temp);
         result.push(temp);
     }
 }
