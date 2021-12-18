@@ -147,7 +147,7 @@ fn emit_label(program: &Program) -> TokenStream {
                 #match_arms
 
                 _ => {
-                    log::error!("Bad/Unsupported terminal in the instruction selection");
+                    log::debug!("{} is not found as a base terminal",ins.to_type());
                 },
             }
         }
@@ -863,9 +863,9 @@ fn emit_asm(program: &Program) -> TokenStream {
         fn gen_asm(&self,index:usize) -> String
         {
             let rule=self.rules[index];
-            self.gen_asm2(index,rule)
+            self.gen_asm2(index,rule,index)
         }
-        fn gen_asm2(&self,index:usize,rule:u16) -> String
+        fn gen_asm2(&self,index:usize,rule:u16,original_index:usize) -> String
         {
             let instruction=&self.instructions[index];
             log::trace!("Generating {} with rule {}",instruction,rule);
@@ -917,14 +917,14 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
             let nt_type = format_ident!("{}_NT", nonterm);
             quote! {
                 let rule=self.instruction_states[#prelude as usize].rule[#nt_type];
-                let #name=self.gen_asm2(#prelude as usize,rule);
+                let #name=self.gen_asm2(#prelude as usize,rule,original_index);
                 //log::trace!("{}-txt-{}-txt-{}",#s,#name,#s);
             }
         }
 
         IRPattern::Reg(name, _) => {
             quote! {
-                let #name=self.allocation[#prelude as usize][index].unwrap();
+                let #name=self.allocation[#prelude as usize][original_index].unwrap();
             }
         }
 
