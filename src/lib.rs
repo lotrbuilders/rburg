@@ -95,9 +95,11 @@ fn split_size(size: &String) -> Vec<String> {
 
 fn process_size(result: &mut Vec<String>, string: &mut String) {
     let temp: String = string.drain(0..).collect();
-    if temp.starts_with('i') {
-        result.push(temp.replace('i', "s"));
+    if temp.starts_with('I') {
+        result.push(temp.replace('I', "S"));
     } else {
+        println!("{} does not start with i", temp);
+        eprintln!("{} does not start with i", temp);
         result.push(temp);
     }
 }

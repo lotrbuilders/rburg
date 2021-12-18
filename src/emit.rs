@@ -320,7 +320,7 @@ fn emit_label_pattern_condition(
                 .map(|id| id.to_string())
                 .unwrap_or_else(|| get_default_size(term));
 
-            let ir_sizes = split_size(&size);
+            let ir_sizes = split_size(&size.to_uppercase());
             let mut check_size = TokenStream::new();
             for size in ir_sizes {
                 let size = format_ident!("{}", size, span = span);

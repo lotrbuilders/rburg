@@ -75,13 +75,15 @@ impl Checkable for IRPattern {
 
                     (
                         "Ret" | "Arg" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq"
-                        | "Ne" | "Lt" | "Le" | "Gt" | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc",
+                        | "Ne" | "Lt" | "Le" | "Gt" | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc" | "Cvp"
+                        | "Cvs" | "Cvu",
                         IRPattern::Reg(..) | IRPattern::Node { .. } | IRPattern::NonTerm(..),
                     ) => Ok(()),
 
                     (
                         "Ret" | "Arg" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq"
-                        | "Ne" | "Lt" | "Le" | "Gt" | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc",
+                        | "Ne" | "Lt" | "Le" | "Gt" | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc" | "Cvp"
+                        | "Cvs" | "Cvu",
                         _,
                     ) => Err(Error::new(*span, "Unexpected constant").to_compile_error()),
 
@@ -94,12 +96,12 @@ impl Checkable for IRPattern {
                 match (&term.to_string() as &str, right) {
                     (
                         "Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Arg" | "Label" | "Jmp"
-                        | "Call",
+                        | "Call" | "Cvp" | "Cvs" | "Cvu",
                         None,
                     ) => Ok(()),
                     (
                         "Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Arg" | "Label" | "Jmp"
-                        | "Call",
+                        | "Call" | "Cvp" | "Cvs" | "Cvu",
                         _,
                     ) => Err(Error::new(*span, "Unexpected right side in tree").to_compile_error()),
 
@@ -131,9 +133,9 @@ impl Checkable for IRPattern {
                 }?;
 
                 if let Some(size) = size {
-                    for s in split_size(&size.to_string()) {
+                    for s in split_size(&size.to_string().to_uppercase()) {
                         match &s as &str {
-                            "p" | "P" | "i32" | "I32" | "s32" | "S32" => Ok(()),
+                            "P" | "S8" | "S16" | "S32" | "S64" => Ok(()),
                             string => Err(Error::new(*span, &format!("Unknown patern {}", string))
                                 .to_compile_error()),
                         }?;
