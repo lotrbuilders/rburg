@@ -1,22 +1,13 @@
 /*
 This module parses the program description in the rburg-DSL given to the backend
 <program> : <definition>+
-<definition> : ( <ins_definition> )
-<ins_definition>: define_ins name [<ir-pattern>] string
-                | define_ins name [<ir-pattern>] {rust code} string
-
-<ir-pattern>    : (set (name |%name|) <ir-pattern>)
-                | (operator (name |%name|) (name |%name|))
-                | ()
-
 <definition>
-    (%reg|non-term|<empty>): <tree> template {<rust-code>}
+    (%reg|non-term|<empty>): <tree> template (#|?)* {<rust-code>}
 <tree>:
     | <term> [<size>] [ '(' <tree> [ , <tree> ] ')' ]
     | <name> <non-term>
     | <name> '%'<reg>
     | '#' <name>
-
 */
 use crate::*;
 use proc_macro2::Span;
@@ -100,10 +91,20 @@ impl Parse for Definition {
     fn parse(input: ParseStream) -> Result<Self> {
         let name = input.parse()?;
         let pattern = input.parse()?;
-        let two_address = input.peek(Token![?]);
-        if two_address {
-            input.parse::<Token![?]>()?;
+        let mut two_address = false;
+        let mut custom_print = false;
+        loop {
+            if input.peek(Token![?]) {
+                input.parse::<Token![?]>().expect("msg");
+                two_address = true;
+            } else if input.peek(Token![#]) {
+                input.parse::<Token![#]>().expect("msg");
+                custom_print = true;
+            } else {
+                break;
+            }
         }
+
         let template = input.parse()?;
         let rust_code = match input.parse::<Block>() {
             Ok(block) => Some(block),
@@ -116,6 +117,7 @@ impl Parse for Definition {
             template,
             rust_code,
             two_address,
+            custom_print,
         })
     }
 }

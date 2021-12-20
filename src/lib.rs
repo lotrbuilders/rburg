@@ -37,6 +37,7 @@ struct Definition {
     template: LitStr,
     rust_code: Option<Block>,
     two_address: bool,
+    custom_print: bool,
 }
 
 enum DefinitionType {
@@ -69,7 +70,7 @@ enum IRPattern {
 
 fn get_default_size(ident: &Ident) -> String {
     String::from(match &ident.to_string() as &str {
-        "AddrL" | "AddrG" | "Jmp" | "Label" => "P",
+        "AddrL" | "AddrG" | "Jmp" | "Label" | "Cvp" => "P",
 
         "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt"
         | "Le" | "Gt" | "Ge" | "Jcc" | "Jnc" | "Arg" => "I32",

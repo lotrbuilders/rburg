@@ -23,6 +23,8 @@ pub(super) fn emit(program: Program) -> TokenStream {
     let assembly = emit_asm(&program);
     let two_address = emit_two_address(&program);
     let is_instruction = emit_is_instruction(&program);
+    let custom_print = emit_custom_print(&program);
+
     let rule_count = program.definitions.len();
     let backend_name = program.implements;
 
@@ -36,13 +38,15 @@ pub(super) fn emit(program: Program) -> TokenStream {
 
             instruction_states:Vec<State>,
             rules : Vec<u16>,
-            non_terminals: [Vec<usize>;#rule_count],
 
             allocation: Vec<RegisterAllocation>,
             reg_relocations: Vec<Vec<RegisterRelocation>>,
 
             local_offsets: Vec<i32>,
             stack_size: i32,
+
+            non_terminals: [Vec<usize>;#rule_count],
+            custom_print: [bool;#rule_count],
         }
         #state
         impl #backend_name {
@@ -64,13 +68,15 @@ pub(super) fn emit(program: Program) -> TokenStream {
 
                     instruction_states: Vec::new(),
                     rules: Vec::new(),
-                    non_terminals: #non_terminals,
 
                     allocation: Vec::new(),
                     reg_relocations: Vec::new(),
 
                     local_offsets: Vec::new(),
                     stack_size: 0,
+
+                    non_terminals: #non_terminals,
+                    custom_print: [#custom_print],
                 }
             }
         }
@@ -1038,4 +1044,13 @@ fn emit_is_instruction(program: &Program) -> TokenStream {
             }
         }
     }
+}
+
+fn emit_custom_print(program: &Program) -> TokenStream {
+    let mut result = TokenStream::new();
+    for definition in &program.definitions {
+        let t = definition.custom_print;
+        result.append_all(quote! {#t,});
+    }
+    result
 }
