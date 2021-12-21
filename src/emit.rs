@@ -31,6 +31,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
     quote!(
         pub struct #backend_name {
             function_name: String,
+            function_names:HashSet<String>,
             instructions: Vec<IRInstruction>,
             definition_index: Vec<u32>,
             use_count: Vec<u32>,
@@ -61,6 +62,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
             pub fn new() -> #backend_name {
                 #backend_name {
                     function_name: String::new(),
+                    function_names: HashSet::new(),
                     instructions: Vec::new(),
                     definition_index: Vec::new(),
                     use_count: Vec::new(),
