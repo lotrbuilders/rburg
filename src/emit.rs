@@ -525,7 +525,7 @@ fn emit_get_child(program: &Program) -> TokenStream {
                     .map(|r| r.unwrap())
                     .map(|r| self.definition_index[r as usize])
                     .collect();
-                result.push(*addr);
+                result.push(self.definition_index[*addr as usize]);
                 log::debug!("Get kids of virtual call {}, {:?}",index,result);
                 return result
             }
