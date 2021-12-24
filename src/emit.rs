@@ -521,11 +521,11 @@ fn emit_get_child(program: &Program) -> TokenStream {
                 return result
             }
             else if let IRInstruction::CallV(..,addr,arguments) = &self.instructions[index as usize] {
-                let mut result=arguments.arguments.iter()
+                let mut result:Vec<u32>=arguments.arguments.iter()
                     .map(|r| r.unwrap())
                     .map(|r| self.definition_index[r as usize])
                     .collect();
-                result.push(addr);
+                result.push(*addr);
                 log::debug!("Get kids of virtual call {}, {:?}",index,result);
                 return result
             }
@@ -759,8 +759,8 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
             }else if let IRInstruction::CallV(_,_,addr,arguments) = &self.instructions[index as usize] {
                 let used_vregs = arguments.arguments.iter().map(|r| r.unwrap()).collect::<Vec<u32>>();
                 let used_classes = self.get_call_regs(&arguments.sizes);
-                let mut result=used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect();
-                result.push(self.get_vregisters2(index, rule, &mut used_vregs)[0])//Should have exactly one register, so this should be fine
+                let mut result:Vec<_>=used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect();
+                self.get_vregisters2(index, rule, &mut result);//Should have exactly one register, so this should be fine
                 result
 
             } else {
