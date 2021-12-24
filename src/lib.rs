@@ -75,7 +75,7 @@ fn get_default_size(ident: &Ident) -> String {
         "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt"
         | "Le" | "Gt" | "Ge" | "Jcc" | "Jnc" | "Arg" => "I32",
 
-        "Mul" | "Div" | "Call" => "S32",
+        "Mul" | "Div" | "Call" | "CallV" => "S32",
 
         _ => "unknown",
     })

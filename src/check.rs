@@ -80,6 +80,11 @@ impl Checkable for IRPattern {
                         IRPattern::Reg(..) | IRPattern::Node { .. } | IRPattern::NonTerm(..),
                     ) => Ok(()),
 
+                    ("CallV", IRPattern::Reg(..)) => Ok(()),
+                    ("CallV", _) => {
+                        Err(Error::new(*span, "CallV expects register").to_compile_error())
+                    }
+
                     (
                         "Ret" | "Arg" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq"
                         | "Ne" | "Lt" | "Le" | "Gt" | "Ge" | "Mul" | "Div" | "Jcc" | "Jnc" | "Cvp"
@@ -96,7 +101,7 @@ impl Checkable for IRPattern {
                 match (&term.to_string() as &str, right) {
                     (
                         "Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Arg" | "Label" | "Jmp"
-                        | "Call" | "Cvp" | "Cvs" | "Cvu",
+                        | "Call" | "Cvp" | "Cvs" | "Cvu" | "CallV",
                         None,
                     ) => Ok(()),
                     (

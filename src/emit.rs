@@ -520,6 +520,15 @@ fn emit_get_child(program: &Program) -> TokenStream {
                 log::debug!("Get kids of call {}, {:?}",index,result);
                 return result
             }
+            else if let IRInstruction::CallV(..,addr,arguments) = &self.instructions[index as usize] {
+                let mut result=arguments.arguments.iter()
+                    .map(|r| r.unwrap())
+                    .map(|r| self.definition_index[r as usize])
+                    .collect();
+                result.push(addr);
+                log::debug!("Get kids of virtual call {}, {:?}",index,result);
+                return result
+            }
             match rule_number {
                 #arms
                 _ => {
@@ -537,6 +546,10 @@ fn emit_get_child(program: &Program) -> TokenStream {
             }
             else if let IRInstruction::Call(..,arguments) = &self.instructions[index as usize] {
                 let length=arguments.arguments.len();
+                return vec![reg_NT;length];
+            }
+            else if let IRInstruction::Call(..,arguments) = &self.instructions[index as usize] {
+                let length=arguments.arguments.len()+1;//One extra for the address, which must be in register
                 return vec![reg_NT;length];
             }
             //log::trace!("Get non_terminals of rule {}",rule_number);
@@ -742,6 +755,14 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
                 let used_vregs = arguments.arguments.iter().map(|r| r.unwrap()).collect::<Vec<u32>>();
                 let used_classes = self.get_call_regs(&arguments.sizes);
                 used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect()
+
+            }else if let IRInstruction::CallV(_,_,addr,arguments) = &self.instructions[index as usize] {
+                let used_vregs = arguments.arguments.iter().map(|r| r.unwrap()).collect::<Vec<u32>>();
+                let used_classes = self.get_call_regs(&arguments.sizes);
+                let mut result=used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect();
+                result.push(self.get_vregisters2(index, rule, &mut used_vregs)[0])//Should have exactly one register, so this should be fine
+                result
+
             } else {
                 let mut used_vregs=Vec::with_capacity(4);
                 self.get_vregisters2(index, rule, &mut used_vregs);
