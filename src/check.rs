@@ -135,7 +135,7 @@ impl Checkable for IRPattern {
                 if let Some(size) = size {
                     for s in split_size(&size.to_string().to_uppercase()) {
                         match &s as &str {
-                            "P" | "S8" | "S16" | "S32" | "S64" => Ok(()),
+                            "P" | "S8" | "S16" | "S32" | "S64" | "V" => Ok(()),
                             string => Err(Error::new(*span, &format!("Unknown patern {}", string))
                                 .to_compile_error()),
                         }?;
