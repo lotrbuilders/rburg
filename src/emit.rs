@@ -548,7 +548,7 @@ fn emit_get_child(program: &Program) -> TokenStream {
                 let length=arguments.arguments.len();
                 return vec![reg_NT;length];
             }
-            else if let IRInstruction::Call(..,arguments) = &self.instructions[index as usize] {
+            else if let IRInstruction::CallV(..,arguments) = &self.instructions[index as usize] {
                 let length=arguments.arguments.len()+1;//One extra for the address, which must be in register
                 return vec![reg_NT;length];
             }
