@@ -788,6 +788,9 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
         fn has_result(&self,index:u32,rule:u16)-> Option<(u32,&'static RegisterClass)>{
             if let IRInstruction::Label(Some(_),_) = self.instructions[index as usize] {
                 return None;
+            } else if let IRInstruction::Call(IRSize::V,..)|IRInstruction::CallV(IRSize::V,..)=self.instructions[index as usize]
+            {
+                return None;
             }
             match rule
             {
