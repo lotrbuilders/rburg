@@ -749,7 +749,7 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
     }
     quote! {
 
-        fn get_vregisters(&self,index:u32,rule:u16) -> (Vec<(u32,&'static RegisterClass)>,Option<(u32,&'static RegisterClass)>)
+        fn get_vregisters(&self,index:u32,rule:u16) -> (SmallVec<[(u32,&'static RegisterClass);4]>,Option<(u32,&'static RegisterClass)>)
         {
             let used_vregs=if let IRInstruction::Call(_,_,_,arguments) = &self.instructions[index as usize] {
                 let used_vregs = arguments.arguments.iter().map(|r| r.unwrap()).collect::<Vec<u32>>();
@@ -759,12 +759,12 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
             }else if let IRInstruction::CallV(_,_,addr,arguments) = &self.instructions[index as usize] {
                 let used_vregs = arguments.arguments.iter().map(|r| r.unwrap()).collect::<Vec<u32>>();
                 let used_classes = self.get_call_regs(&arguments.sizes);
-                let mut result:Vec<_>=used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect();
+                let mut result:SmallVec<_>=used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect();
                 self.get_vregisters2(index, rule, &mut result);//Should have exactly one register, so this should be fine
                 result
 
             } else {
-                let mut used_vregs=Vec::with_capacity(4);
+                let mut used_vregs=SmallVec::new();
                 self.get_vregisters2(index, rule, &mut used_vregs);
                 used_vregs
             };
@@ -773,7 +773,7 @@ fn emit_get_vregisters(program: &Program) -> TokenStream {
             (used_vregs,result_vreg)
         }
 
-        fn get_vregisters2(&self,index:u32,rule:u16, result:&mut Vec<(u32,&'static RegisterClass)>) -> ()
+        fn get_vregisters2(&self,index:u32,rule:u16, result:&mut SmallVec<[(u32,&'static RegisterClass);4]>) -> ()
         {
             match rule
             {
