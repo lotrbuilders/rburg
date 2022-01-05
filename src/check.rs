@@ -25,7 +25,7 @@ impl Program {
 impl Definition {
     fn check(&self, span: &Span) -> Result<(), TokenStream> {
         let mut result = TokenStream::new();
-        if let Err(err) = self.pattern.check(&self.name, span) {
+        if let Err(err) = self.pattern.check(&self.name, true, span) {
             result.append_all(quote! {compile_error!(#err);});
         }
 
@@ -40,7 +40,12 @@ impl Definition {
 //fn expected_pattenr ->()
 
 impl IRPattern {
-    fn check(&self, result_name: &DefinitionType, span: &Span) -> Result<(), TokenStream> {
+    fn check(
+        &self,
+        result_name: &DefinitionType,
+        first: bool,
+        span: &Span,
+    ) -> Result<(), TokenStream> {
         match self {
             IRPattern::Node {
                 term,
@@ -142,21 +147,31 @@ impl IRPattern {
                     }
                 }
 
-                match (&term.to_string() as &str, result_name) {
-                    (
-                        "Jcc" | "Jnc" | "Jmp" | "Store" | "Ret" | "Arg" | "Label",
-                        DefinitionType::Stmt,
-                    ) => Ok(()),
-                    ("Call" | "CallV", DefinitionType::Stmt) => Ok(()),
-                    (_, DefinitionType::Stmt) => {
-                        Err(Error::new(*span, "Expected a result").to_compile_error())
-                    }
-                    (_, _) => Ok(()),
-                }?;
+                if first {
+                    match (&term.to_string() as &str, result_name) {
+                        (
+                            "Jcc" | "Jnc" | "Jmp" | "Store" | "Ret" | "Arg" | "Label",
+                            DefinitionType::Stmt,
+                        ) => Ok(()),
+                        ("Call" | "CallV", DefinitionType::Stmt) => Ok(()),
+                        (_, DefinitionType::Stmt) => {
+                            Err(Error::new(*span, "Expected a result").to_compile_error())
+                        }
+                        (_, _) => Ok(()),
+                    }?;
+                } else {
+                    match &term.to_string() as &str {
+                        "Jcc" | "Jnc" | "Jmp" | "Store" | "Ret" | "Arg" | "Label" => Err(
+                            Error::new(*span, "Unexpected terminal without result in tree")
+                                .to_compile_error(),
+                        ),
+                        _ => Ok(()),
+                    }?;
+                }
 
-                left.check(result_name, span)?;
+                left.check(result_name, false, span)?;
                 if let Some(right) = right {
-                    right.check(result_name, span)?;
+                    right.check(result_name, false, span)?;
                 }
 
                 Ok(())
