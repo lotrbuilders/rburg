@@ -4,13 +4,8 @@ use syn::Error;
 
 use crate::*;
 
-// Check for reg vs %ireg
-pub(super) trait Checkable {
-    fn check(&self, span: &Span) -> Result<(), TokenStream>;
-}
-
-impl Checkable for Program {
-    fn check(&self, _: &Span) -> Result<(), TokenStream> {
+impl Program {
+    pub fn check(&self, _: &Span) -> Result<(), TokenStream> {
         for (definition, span) in self.definitions.iter().zip(self.span.iter()) {
             definition.check(span)?;
         }
@@ -27,10 +22,10 @@ impl Checkable for Program {
     }
 }
 
-impl Checkable for Definition {
+impl Definition {
     fn check(&self, span: &Span) -> Result<(), TokenStream> {
         let mut result = TokenStream::new();
-        if let Err(err) = self.pattern.check(span) {
+        if let Err(err) = self.pattern.check(&self.name, span) {
             result.append_all(quote! {compile_error!(#err);});
         }
 
@@ -44,8 +39,8 @@ impl Checkable for Definition {
 
 //fn expected_pattenr ->()
 
-impl Checkable for IRPattern {
-    fn check(&self, span: &Span) -> Result<(), TokenStream> {
+impl IRPattern {
+    fn check(&self, result_name: &DefinitionType, span: &Span) -> Result<(), TokenStream> {
         match self {
             IRPattern::Node {
                 term,
@@ -147,9 +142,21 @@ impl Checkable for IRPattern {
                     }
                 }
 
-                left.check(span)?;
+                match (&term.to_string() as &str, result_name) {
+                    (
+                        "Jcc" | "Jnc" | "Jmp" | "Store" | "Ret" | "Arg" | "Label",
+                        DefinitionType::Stmt,
+                    ) => Ok(()),
+                    ("Call" | "CallV", DefinitionType::Stmt) => Ok(()),
+                    (_, DefinitionType::Stmt) => {
+                        Err(Error::new(*span, "Expected a result").to_compile_error())
+                    }
+                    (_, _) => Ok(()),
+                }?;
+
+                left.check(result_name, span)?;
                 if let Some(right) = right {
-                    right.check(span)?;
+                    right.check(result_name, span)?;
                 }
 
                 Ok(())

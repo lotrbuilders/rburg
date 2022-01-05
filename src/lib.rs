@@ -10,8 +10,6 @@ use proc_macro2::Span;
 use quote::{format_ident, TokenStreamExt};
 use syn::{parse_macro_input, Block, Ident, LitStr};
 
-use crate::check::Checkable;
-
 struct Program {
     implements: Ident,
     definitions: Vec<Definition>,
