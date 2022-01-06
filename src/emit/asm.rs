@@ -95,7 +95,6 @@ fn emit_asm_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenStream {
             quote! {
                 let rule=self.instruction_states[#prelude as usize].rule[#nt_type];
                 let #name=self.gen_asm2(#prelude as usize,rule,original_index);
-                //log::trace!("{}-txt-{}-txt-{}",#s,#name,#s);
             }
         }
 
@@ -129,23 +128,7 @@ fn emit_asm_format(pattern: &IRPattern) -> TokenStream {
             left
         }
 
-        IRPattern::NonTerm(name, _) => {
-            if let Some('_') = name.to_string().chars().next() {
-                TokenStream::new()
-            } else {
-                quote! {,#name=#name}
-            }
-        }
-
-        IRPattern::Reg(name, _) => {
-            if let Some('_') = name.to_string().chars().next() {
-                TokenStream::new()
-            } else {
-                quote! {,#name=#name}
-            }
-        }
-
-        IRPattern::Const(name) => {
+        IRPattern::NonTerm(name, _) | IRPattern::Const(name) | IRPattern::Reg(name, _) => {
             if let Some('_') = name.to_string().chars().next() {
                 TokenStream::new()
             } else {

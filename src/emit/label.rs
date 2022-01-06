@@ -265,22 +265,17 @@ fn emit_label_pattern_cost(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
             left
         }
         IRPattern::NonTerm(_, nonterm) => {
-            //println!("Reg");
             let nt_type = format_ident!("{}_NT", nonterm);
             quote! {
                 self.instruction_states[#prelude as usize].cost[#nt_type]+
             }
         }
         IRPattern::Reg(_, _) => {
-            //println!("Reg");
             quote! {
                 self.instruction_states[#prelude as usize].cost[reg_NT]+
             }
         }
-        IRPattern::Const(_) => {
-            //println!("Node");
-            TokenStream::new()
-        }
+        IRPattern::Const(_) => TokenStream::new(),
     }
 }
 
@@ -313,6 +308,8 @@ pub(super) fn emit_label_equivelances(program: &Program) -> TokenStream {
             }
         });
     }
+
+    //Special case to allow for register producing instructions to always be seen as statements
     result.append_all(quote! {
         fn label_equivelance_reg(&mut self,index:usize,cost:u16)
         {

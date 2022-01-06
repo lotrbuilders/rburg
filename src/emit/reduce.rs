@@ -168,7 +168,7 @@ pub(super) fn emit_reduce_terminals(program: &Program) -> TokenStream {
             match rule_number {
                 #arms
                 _ => {
-                    log::error!("Rule {} does not exist(index={})",rule_number,index);
+                    log::warn!("Rule {} does not exist(index={})",rule_number,index);
                 }
             }
         }
@@ -207,33 +207,6 @@ fn emit_reduce_terminals_arm(
                 quote! {#txt #left}
             }
         }
-        IRPattern::NonTerm(_, nonterm) => {
-            // Challenge: Correctly reduce the members of the nonterminal
-            let _nt_type = format_ident!("{}_NT", nonterm);
-            if first {
-                quote! {
-                    //let i=#prelude as usize;
-                    //let rule=self.instruction_states[i].rule[#nt_type];
-                    //self.reduce_terminals(i as u32,rule);
-                    //self.rules[i] = rule;
-                }
-            } else {
-                quote! {
-                    //let i=#prelude as usize;
-                    //let rule=self.instruction_states[i].rule[#nt_type];
-                    //self.rules[i] = rule;
-                    //self.reduce_terminals(i as u32,rule);
-                }
-            }
-            //todo!()
-        }
-        IRPattern::Reg(_, _) => {
-            //println!("Reg");
-            TokenStream::new()
-        }
-        IRPattern::Const(_) => {
-            //println!("Node");
-            TokenStream::new()
-        }
+        _ => TokenStream::new(),
     }
 }
