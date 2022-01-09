@@ -9,12 +9,13 @@ impl Program {
         for (definition, span) in self.definitions.iter().zip(self.span.iter()) {
             definition.check(span)?;
         }
-        if !self.implements.to_string().contains("Backend") {
+        let implements = &self.settings.implements;
+        if !implements.to_string().contains("Backend") {
             let string = format!(
                 "Expected the backend name \"{}\" to contain \"Backend\"",
-                self.implements.to_string()
+                implements.to_string()
             );
-            let lit = LitStr::new(&string, self.implements.span());
+            let lit = LitStr::new(&string, implements.span());
             Err(lit.to_token_stream())
         } else {
             Ok(())

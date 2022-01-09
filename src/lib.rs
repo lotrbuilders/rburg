@@ -3,15 +3,24 @@ mod emit;
 mod fmt;
 mod parse;
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    num::NonZeroU32,
+};
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{format_ident, TokenStreamExt};
 use syn::{parse_macro_input, Block, Ident, LitStr};
 
-struct Program {
+struct ProgramSettings {
     implements: Ident,
+    int_size: Option<NonZeroU32>,
+    register_sizes: Option<Vec<(Ident, i32)>>,
+}
+
+struct Program {
+    settings: ProgramSettings,
     definitions: Vec<Definition>,
     span: Vec<Span>,
     terminals: HashMap<String, Vec<u16>>,

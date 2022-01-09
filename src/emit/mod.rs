@@ -2,6 +2,7 @@ mod asm;
 mod label;
 mod reduce;
 mod register;
+mod register_size;
 
 use crate::*;
 use proc_macro2::TokenStream;
@@ -31,7 +32,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
     let custom_print = self::asm::emit_custom_print(&program);
 
     let rule_count = program.definitions.len();
-    let backend_name = program.implements;
+    let backend_name = program.settings.implements;
 
     quote!(
         pub struct #backend_name {

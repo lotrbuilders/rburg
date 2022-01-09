@@ -12,15 +12,14 @@ This module parses the program description in the rburg-DSL given to the backend
 use crate::*;
 use proc_macro2::Span;
 use std::collections::HashMap;
-use syn::parenthesized;
 use syn::parse::{Parse, ParseStream};
 use syn::Block;
+use syn::{parenthesized, LitInt};
 use syn::{Ident, Result, Token};
 
 impl Parse for Program {
     fn parse(input: ParseStream) -> Result<Self> {
-        let implements = input.parse()?;
-        input.parse::<Token![,]>()?;
+        let settings = input.parse()?;
         let mut definitions = Vec::<Definition>::new();
         let mut span = Vec::<Span>::new();
         while !input.is_empty() {
@@ -45,7 +44,6 @@ impl Parse for Program {
 
         let mut nt_equivelances = HashMap::<String, Vec<u16>>::new();
         for (definition, i) in definitions.iter().zip(0u16..) {
-            //if let DefinitionType::NonTerm(name) = &definition.name {
             match &definition.pattern {
                 IRPattern::NonTerm(_name, nonterm) => {
                     let nonterm = nonterm.to_string();
@@ -55,17 +53,8 @@ impl Parse for Program {
                         nt_equivelances.get_mut(&nonterm).unwrap().push(i);
                     }
                 }
-                /*IRPattern::Reg(..) => {
-                    let nonterm = "reg".to_string();
-                    if !nt_equivelances.contains_key(&nonterm) {
-                        nt_equivelances.insert(nonterm.clone(), vec![i]);
-                    } else {
-                        nt_equivelances.get_mut(&nonterm).unwrap().push(i);
-                    }
-                }*/
                 _ => (),
             }
-            //}
         }
 
         let non_terminals = definitions
@@ -77,7 +66,7 @@ impl Parse for Program {
             .collect();
 
         Ok(Program {
-            implements,
+            settings,
             definitions,
             span,
             terminals,
@@ -85,6 +74,51 @@ impl Parse for Program {
             nt_equivelances,
         })
     }
+}
+
+impl Parse for ProgramSettings {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let implements = input.parse()?;
+        input.parse::<Token![,]>()?;
+
+        let mut register_sizes = None;
+        let mut int_size = None;
+
+        loop {
+            let ident = input.parse::<Ident>()?;
+            let span = ident.span();
+            let ident = ident.to_string();
+            input.parse::<Token![:]>()?;
+            match &ident as &str {
+                "instructions" | "instruction" => break,
+                "default_register_sizes" | "default_register_size" => {
+                    let content;
+                    syn::braced!(content in input);
+                    register_sizes = Some(parse_register_size(&content)?)
+                }
+                "int_size" => int_size = Some(input.parse::<LitInt>()?.base10_parse()?),
+                _ => return Err(syn::Error::new(span, "Expected constants")),
+            }
+        }
+
+        Ok(ProgramSettings {
+            implements,
+            int_size,
+            register_sizes,
+        })
+    }
+}
+
+fn parse_register_size(input: ParseStream) -> Result<Vec<(Ident, i32)>> {
+    let mut result = Vec::new();
+    while !input.is_empty() {
+        let ident = input.parse()?;
+        input.parse::<Token![=>]>()?;
+        let register_width = input.parse::<LitInt>()?.base10_parse()?;
+        input.parse::<Token![,]>()?;
+        result.push((ident, register_width))
+    }
+    Ok(result)
 }
 
 impl Parse for Definition {

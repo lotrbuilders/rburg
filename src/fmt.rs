@@ -6,9 +6,23 @@ use std::fmt::{self};
 
 impl Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.settings)?;
+
         for def in &self.definitions {
             writeln!(f, "{}", def)?;
         }
+        Ok(())
+    }
+}
+
+impl Display for ProgramSettings {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}", self.implements)?;
+
+        for (size, width) in self.register_sizes.iter().flat_map(|v| v.iter()) {
+            writeln!(f, "{} => {}", size, width)?;
+        }
+
         Ok(())
     }
 }

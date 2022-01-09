@@ -1,4 +1,7 @@
-use crate::*;
+use crate::{
+    emit::register_size::{emit_default_register_width, modify_template},
+    *,
+};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, TokenStreamExt};
 
@@ -7,36 +10,66 @@ pub(super) fn emit_asm(program: &Program) -> TokenStream {
 
     for i in 0..program.definitions.len() {
         let definition = &program.definitions[i];
-        // Does not currently handle # comments in the code. These might have to be removed later at some stage
-        // At the moment all these commments are handled by the handwritten portion.
+        let (modified_registers, modified_template) = modify_template(
+            &program.settings,
+            &definition.name,
+            &definition.pattern,
+            &definition.template.value(),
+        );
+
         let tab = match definition.name {
             DefinitionType::NonTerm(..) => "",
             _ => "\t",
         };
-        let template = format!("{}{}", tab, definition.template.value());
+        let template = format!("{}{}", tab, modified_template);
         let arm = emit_asm_arm(&definition.pattern, &quote! {index as u32});
+        let register_width = super::register_size::emit_register_width_arm(
+            &definition.pattern,
+            &modified_registers,
+            &quote! {index as u32},
+            &quote! {instruction.get_result().unwrap()},
+        );
+
+        let (result_width, _) = if let DefinitionType::Reg(_) = definition.name {
+            (
+                quote! {let res_width=self.get_default_register_width(index as u32,instruction.get_result().unwrap());},
+                quote! {,res_width=res_width},
+            )
+        } else {
+            (TokenStream::new(), TokenStream::new())
+        };
+
         let format_arm = emit_asm_format(&definition.pattern);
+        let register_format = super::register_size::emit_register_width_format(&modified_registers);
         let i = i as u16;
         if has_used_result(definition) {
             arms.append_all(quote! {
                 #i => {
-
+                    let _=#template;
                     let res=self.allocation[instruction.get_result().unwrap() as usize][index].unwrap();
                     #arm
-                    format!(#template,res=res #format_arm)
+                    #register_width
+                    #result_width
+                    format!(#template,res=res #format_arm #register_format)
                 }
             });
         } else {
             arms.append_all(quote! {
                 #i => {
+                    let _=#template;
                     #arm
-                    format!(#template #format_arm)
+                    #register_width
+                    format!(#template #format_arm #register_format)
                 }
             });
         }
     }
 
+    let default_register_width =
+        emit_default_register_width(program.settings.int_size, &program.settings.register_sizes);
+
     quote! {
+        #default_register_width
         fn gen_asm(&self,index:usize) -> String
         {
             let rule=self.rules[index];
