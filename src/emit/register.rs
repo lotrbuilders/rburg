@@ -18,23 +18,23 @@ pub(super) fn emit_get_vregisters(program: &Program) -> TokenStream {
             let i = i as u16;
             let class = format_ident!("REG_CLASS_{}", class.to_string().to_uppercase());
             result_arm.append_all(quote! {
-                #i => Some((self.instructions[index as usize].get_result().unwrap(),&#class)),
+                #i => Some((self.instructions[index as usize].get_result().unwrap(),#class.clone())),
             });
         }
     }
     quote! {
 
-        fn get_vregisters(&self,index:u32,rule:u16) -> (SmallVec<[(u32,&'static RegisterClass<Register>);4]>,Option<(u32,&'static RegisterClass<Register>)>)
+        fn get_vregisters(&self,index:u32,rule:u16) -> (SmallVec<[(u32, RegisterClass<Register>);4]>,Option<(u32, RegisterClass<Register>)>)
         {
             let used_vregs=if let IRInstruction::Call(_,_,_,arguments) = &self.instructions[index as usize] {
                 let used_vregs = arguments.arguments.iter().map(|r| r.unwrap()).collect::<Vec<u32>>();
                 let used_classes = self.get_call_regs(&arguments.sizes);
-                used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect()
+                used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,(*c).clone())).collect()
 
             }else if let IRInstruction::CallV(_,_,addr,arguments) = &self.instructions[index as usize] {
                 let used_vregs = arguments.arguments.iter().map(|r| r.unwrap()).collect::<Vec<u32>>();
                 let used_classes = self.get_call_regs(&arguments.sizes);
-                let mut result:SmallVec<_>=used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,*c)).collect();
+                let mut result:SmallVec<_>=used_vregs.iter().zip(used_classes.iter()).map(|(r,c)| (*r,(*c).clone())).collect();
                 self.get_vregisters2(index, rule, &mut result);//Should have exactly one register, so this should be fine
                 result
 
@@ -48,7 +48,7 @@ pub(super) fn emit_get_vregisters(program: &Program) -> TokenStream {
             (used_vregs,result_vreg)
         }
 
-        fn get_vregisters2(&self,index:u32,rule:u16, result:&mut SmallVec<[(u32,&'static RegisterClass<Register>);4]>) -> ()
+        fn get_vregisters2(&self,index:u32,rule:u16, result:&mut SmallVec<[(u32, RegisterClass<Register>);4]>) -> ()
         {
             match rule
             {
@@ -60,7 +60,7 @@ pub(super) fn emit_get_vregisters(program: &Program) -> TokenStream {
             };
         }
 
-        fn has_result(&self,index:u32,rule:u16)-> Option<(u32,&'static RegisterClass<Register>)>{
+        fn has_result(&self,index:u32,rule:u16)-> Option<(u32, RegisterClass<Register>)>{
             if let IRInstruction::Label(Some(_),_) = self.instructions[index as usize] {
                 return None;
             }
@@ -112,7 +112,7 @@ fn emit_get_vregisters_arm(pattern: &IRPattern, prelude: &TokenStream) -> TokenS
         IRPattern::Reg(_, class) => {
             let class = format_ident!("REG_CLASS_{}", class.to_string().to_uppercase());
             quote! {
-                result.push((#prelude,& #class));
+                result.push((#prelude, #class.clone()));
             }
         }
 
