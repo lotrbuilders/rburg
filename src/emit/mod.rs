@@ -46,8 +46,8 @@ pub(super) fn emit(program: Program) -> TokenStream {
             instruction_states:Vec<State>,
             rules : Vec<u16>,
 
-            allocation: Vec<RegisterAllocation>,
-            reg_relocations: Vec<Vec<RegisterRelocation>>,
+            allocation: Vec<RegisterAllocation<Register>>,
+            reg_relocations: Vec<Vec<RegisterRelocation<Register>>>,
 
             local_offsets: Vec<i32>,
             stack_size: i32,
