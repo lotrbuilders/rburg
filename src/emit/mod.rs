@@ -42,6 +42,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
             definition_index: Vec<u32>,
             use_count: Vec<u32>,
             arguments: IRArguments,
+            vreg_count: u32,
 
             instruction_states:Vec<State>,
             rules : Vec<u16>,
@@ -73,6 +74,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     definition_index: Vec::new(),
                     use_count: Vec::new(),
                     arguments: IRArguments{sizes:Vec::new(),arguments:Vec::new(),count:0},
+                    vreg_count: 0,
 
                     instruction_states: Vec::new(),
                     rules: Vec::new(),
