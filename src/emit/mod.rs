@@ -47,6 +47,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
             instruction_states:Vec<State>,
             rules : Vec<u16>,
 
+            used_registers: Vec<bool>,
             allocation: Vec<RegisterAllocation<Register>>,
             reg_relocations: Vec<Vec<RegisterRelocation<Register>>>,
 
@@ -79,6 +80,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     instruction_states: Vec::new(),
                     rules: Vec::new(),
 
+                    used_registers:Vec::new(),
                     allocation: Vec::new(),
                     reg_relocations: Vec::new(),
 

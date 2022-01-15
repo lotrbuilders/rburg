@@ -61,7 +61,7 @@ pub(super) fn emit_get_vregisters(program: &Program) -> TokenStream {
         }
 
         fn has_result(&self,index:u32,rule:u16)-> Option<(u32, RegisterClass<Register>)>{
-            if let IRInstruction::Label(Some(_),_) = self.instructions[index as usize] {
+            if let IRInstruction::Label(_,_) = self.instructions[index as usize] {
                 return None;
             }
             match rule
