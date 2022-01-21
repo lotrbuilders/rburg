@@ -18,7 +18,7 @@ pub(super) fn emit_get_child(program: &Program) -> TokenStream {
             if let IRInstruction::Label(Some(phi),_) = &self.instructions[index as usize] {
                 let result=phi.sources.iter().
                     flat_map(|src| src.iter()).
-                    map(|r| self.definition_index[*r as usize]).
+                    map(|(_,r)| self.definition_index[*r as usize]).
                     collect();
                 log::debug!("Get kids of phi node {}, {:?}",index,result);
                 return result
@@ -52,7 +52,7 @@ pub(super) fn emit_get_child(program: &Program) -> TokenStream {
         fn get_child_non_terminals(&self,index:u32,rule_number:u16) -> Vec<usize>
         {
             if let IRInstruction::Label(Some(phi),_) = &self.instructions[index as usize] {
-                let length=phi.sources.len()*phi.sources.get(0).map(|v| v.len()).unwrap_or(0);
+                let length=phi.sources.iter().flat_map(|v| v.iter()).count();
                 return vec![reg_NT;length];
             }
             else if let IRInstruction::Call(..,arguments) = &self.instructions[index as usize] {
