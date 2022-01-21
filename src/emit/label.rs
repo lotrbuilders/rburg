@@ -80,6 +80,7 @@ pub(super) fn emit_label(program: &Program) -> TokenStream {
                 IRInstruction::Call(..,name,_) => format!("{}", name),
                 IRInstruction::Phi(phi) => format!("{}",phi),
                 IRInstruction::PhiSrc(label) => format!("phisrc L{}",label),
+                IRInstruction::Nop => format!("nop"),
                 _ => {
                     log::error!("Get value called without value");
                     format!("")

@@ -17,11 +17,11 @@ pub(super) fn emit_asm(program: &Program) -> TokenStream {
             &definition.template.value(),
         );
 
-        let tab = match definition.name {
+        let _tab = match definition.name {
             DefinitionType::NonTerm(..) => "",
             _ => "\t",
         };
-        let template = format!("{}{}", tab, modified_template);
+        let template = modified_template;
         let arm = emit_asm_arm(&definition.pattern, &quote! {index as u32});
         let register_width = super::register_size::emit_register_width_arm(
             &definition.pattern,

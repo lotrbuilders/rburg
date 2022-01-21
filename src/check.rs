@@ -58,10 +58,11 @@ impl IRPattern {
                 let right = right.as_ref().clone().map(|f| &**f);
 
                 match (&term.to_string() as &str, left) {
-                    ("Imm" | "AddrL" | "AddrG" | "Label" | "Jmp" | "Call", IRPattern::Const(_)) => {
-                        Ok(())
-                    }
-                    ("Imm" | "AddrL" | "AddrG" | "Label" | "Jmp" | "Call", _) => {
+                    (
+                        "Imm" | "AddrL" | "AddrG" | "Label" | "Jmp" | "Call" | "Nop",
+                        IRPattern::Const(_),
+                    ) => Ok(()),
+                    ("Imm" | "AddrL" | "AddrG" | "Label" | "Jmp" | "Call" | "Nop", _) => {
                         Err(Error::new(*span, "Expected constants").to_compile_error())
                     }
 
@@ -102,12 +103,12 @@ impl IRPattern {
                 match (&term.to_string() as &str, right) {
                     (
                         "Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Arg" | "Label" | "Jmp"
-                        | "Call" | "Cvp" | "Cvs" | "Cvu" | "CallV",
+                        | "Call" | "CallV" | "Cvp" | "Cvs" | "Cvu" | "Nop",
                         None,
                     ) => Ok(()),
                     (
                         "Imm" | "AddrL" | "AddrG" | "Load" | "Ret" | "Arg" | "Label" | "Jmp"
-                        | "Call" | "Cvp" | "Cvs" | "Cvu",
+                        | "Call" | "CallV" | "Cvp" | "Cvs" | "Cvu" | "Nop",
                         _,
                     ) => Err(Error::new(*span, "Unexpected right side in tree").to_compile_error()),
 
@@ -151,7 +152,7 @@ impl IRPattern {
                 if first {
                     match (&term.to_string() as &str, result_name) {
                         (
-                            "Jcc" | "Jnc" | "Jmp" | "Store" | "Ret" | "Arg" | "Label",
+                            "Jcc" | "Jnc" | "Jmp" | "Store" | "Ret" | "Arg" | "Label" | "Nop",
                             DefinitionType::Stmt,
                         ) => Ok(()),
                         ("Call" | "CallV", DefinitionType::Stmt) => Ok(()),

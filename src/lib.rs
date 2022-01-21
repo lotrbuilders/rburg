@@ -77,7 +77,7 @@ enum IRPattern {
 
 fn get_default_size(ident: &Ident) -> String {
     String::from(match &ident.to_string() as &str {
-        "AddrL" | "AddrG" | "Jmp" | "Label" | "Cvp" => "P",
+        "AddrL" | "AddrG" | "Jmp" | "Label" | "Cvp" | "Nop" => "P",
 
         "Imm" | "Load" | "Store" | "Add" | "Sub" | "Xor" | "Or" | "And" | "Eq" | "Ne" | "Lt"
         | "Le" | "Gt" | "Ge" | "Jcc" | "Jnc" | "Arg" => "I32",
