@@ -74,7 +74,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     instructions: Vec::new(),
                     definition_index: Vec::new(),
                     use_count: Vec::new(),
-                    arguments: IRArguments{sizes:Vec::new(),arguments:Vec::new(),count:0},
+                    arguments: IRArguments{sizes:Vec::new(),arguments:Vec::new(),variables:Vec::new(),count:0},
                     vreg_count: 0,
 
                     instruction_states: Vec::new(),
