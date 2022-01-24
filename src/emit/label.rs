@@ -231,8 +231,11 @@ fn emit_label_pattern_condition(
             }
         }
         IRPattern::NonTerm(..) => {
-            //println!("NonTerm");
-            TokenStream::new()
+            if !root {
+                quote! { self.get_vreg_use_count(#prelude) <= 1 &&}
+            } else {
+                TokenStream::new()
+            }
         }
         IRPattern::Reg(_, _) => {
             //println!("Reg");
