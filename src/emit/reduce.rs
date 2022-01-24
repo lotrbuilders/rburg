@@ -154,7 +154,12 @@ fn emit_get_non_terminals_arm(pattern: &IRPattern) -> TokenStream {
 pub(super) fn emit_reduce_terminals(program: &Program) -> TokenStream {
     let mut arms = TokenStream::new();
     for i in 0..program.definitions.len() {
-        let arm = emit_reduce_terminals_arm(&program.definitions[i].pattern, &quote! {index}, true);
+        let first = matches!(
+            program.definitions[i].name,
+            DefinitionType::Reg(_) | DefinitionType::Stmt,
+        );
+        let arm =
+            emit_reduce_terminals_arm(&program.definitions[i].pattern, &quote! {index}, first);
         let i = i as u16;
         arms.append_all(quote! {
             #i => {
@@ -205,6 +210,14 @@ fn emit_reduce_terminals_arm(
                 left
             } else {
                 quote! {#txt #left}
+            }
+        }
+        IRPattern::NonTerm(_, nonterm) => {
+            let nt_type = format_ident!("{}_NT", nonterm);
+            quote! {
+                let state = &self.instruction_states[#prelude as usize];
+                let rule = state.rule[#nt_type];
+                self.reduce_terminals(#prelude,rule)
             }
         }
         _ => TokenStream::new(),
