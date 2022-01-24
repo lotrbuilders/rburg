@@ -71,7 +71,7 @@ pub(super) fn emit_label(program: &Program) -> TokenStream {
             let instruction = &self.instructions[instruction as usize];
             match instruction {
                 IRInstruction::Imm(_, _, value) => format!("{}", value),
-                &IRInstruction::AddrL(_,_,i) => format!("{}", self.local_offsets[i]),
+                &IRInstruction::AddrL(_,_,i) => format!("{}", self.local_offsets[&(i as u32)]),
                 IRInstruction::AddrG(_,_,name) => format!("{}", name),
                 IRInstruction::Jcc(..,i) => format!("{}", i),
                 IRInstruction::Jnc(..,i) => format!("{}", i),

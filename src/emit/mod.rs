@@ -44,15 +44,15 @@ pub(super) fn emit(program: Program) -> TokenStream {
             arguments: IRArguments,
             vreg_count: u32,
 
-            instruction_states:Vec<State>,
-            rules : Vec<u16>,
+            instruction_states: Vec<State>,
+            rules :             Vec<u16>,
 
-            used_registers: Vec<bool>,
-            allocation: Vec<RegisterAllocation<Register>>,
-            reg_relocations: Vec<Vec<RegisterRelocation<Register>>>,
+            used_registers:     Vec<bool>,
+            allocation:         Vec<RegisterAllocation<Register>>,
+            reg_relocations:    Vec<Vec<RegisterRelocation<Register>>>,
 
-            local_offsets: Vec<i32>,
-            stack_size: i32,
+            local_offsets:      HashMap<u32,i32>,
+            stack_size:         i32,
 
             non_terminals: [Vec<usize>;#rule_count],
             custom_print: [bool;#rule_count],
@@ -84,7 +84,7 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     allocation: Vec::new(),
                     reg_relocations: Vec::new(),
 
-                    local_offsets: Vec::new(),
+                    local_offsets: HashMap::new(),
                     stack_size: 0,
 
                     non_terminals: #non_terminals,
