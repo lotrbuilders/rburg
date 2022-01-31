@@ -36,7 +36,6 @@ impl Parse for Program {
             span.push(input.span());
             definitions.push(input.parse::<Definition>()?);
         }
-
         let mut terminals = HashMap::<String, Vec<u16>>::new();
         for (definition, i) in definitions.iter().zip(0u16..) {
             match &definition.pattern {
