@@ -1,13 +1,23 @@
 /*
 This module parses the program description in the rburg-DSL given to the backend
-<program> : <definition>+
-<definition>
-    (%reg|non-term|<empty>): <tree> template (#|?)* {<rust-code>}
-<tree>:
-    | <term> [<size>] [ '(' <tree> [ , <tree> ] ')' ]
+<program>:
+    <backend-name>
+    [int_size ':' <number>]
+    [<default_register_size>]
+    instructions ':' <definition>+
+
+<default_register_size>: default_register_sizes ':' '{' (<size> ':' <number>)* '}'
+
+<definition>:
+    ('%' reg | <non-term> | <empty>) ':' <tree> template ('#' | '?')*  [ '{'<rust-code>'}' ]
+
+<tree>
+    : <term> [<size>] '(' <tree> [ ',' <tree> ] ')'
     | <name> <non-term>
     | <name> '%'<reg>
     | '#' <name>
+
+<size>: (('s'<number>) | 'p')+
 */
 use crate::*;
 use proc_macro2::Span;
