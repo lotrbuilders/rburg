@@ -159,7 +159,7 @@ fn emit_label_pattern(program: &Program, index: u16) -> TokenStream {
             if #condition true {
                 let cost = #child_cost #cost;
                 let state = &mut self.instruction_states[index as usize];
-                if cost<state.cost[#nt_type] {
+                if cost < state.cost[#nt_type] {
                     state.cost[#nt_type]=cost;
                     state.rule[#nt_type]=#index;
                     self.#nt_equivelance(index as usize,cost);
@@ -209,6 +209,12 @@ fn emit_label_pattern_condition(
                 (#check_size false)
             };
 
+            let check_side_effects = if &term.to_string() == "Load" {
+                quote! {&& index<=self.valid_until[#prelude]}
+            } else {
+                TokenStream::new()
+            };
+
             let left_prelude = quote! {self.get_left_index(#prelude) };
             let mut left = emit_label_pattern_condition(&*left, &left_prelude, false);
             //println!("left: {}", left.to_string());
@@ -227,6 +233,7 @@ fn emit_label_pattern_condition(
                 self.instructions[#prelude as usize].to_type()==IRType::#term
                 && #check_size
                 #check_use_count
+                #check_side_effects
                 && #left
             }
         }

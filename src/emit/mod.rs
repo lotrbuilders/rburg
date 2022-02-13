@@ -41,11 +41,13 @@ pub(super) fn emit(program: Program) -> TokenStream {
             instructions: Vec<IRInstruction>,
             definition_index: Vec<u32>,
             use_count: Vec<u32>,
+            valid_until: Vec<u32>,
+
             arguments: IRArguments,
             vreg_count: u32,
 
             instruction_states: Vec<State>,
-            rules :             Vec<u16>,
+            rules:              Vec<u16>,
 
             used_registers:     Vec<bool>,
             allocation:         Vec<RegisterAllocation<Register>>,
@@ -74,6 +76,8 @@ pub(super) fn emit(program: Program) -> TokenStream {
                     instructions: Vec::new(),
                     definition_index: Vec::new(),
                     use_count: Vec::new(),
+                    valid_until: Vec::new(),
+
                     arguments: IRArguments{sizes:Vec::new(),arguments:Vec::new(),variables:Vec::new(),count:0},
                     vreg_count: 0,
 
@@ -93,7 +97,6 @@ pub(super) fn emit(program: Program) -> TokenStream {
             }
         }
         #two_address
-
     )
 }
 
