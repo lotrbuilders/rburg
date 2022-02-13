@@ -210,7 +210,7 @@ fn emit_label_pattern_condition(
             };
 
             let check_side_effects = if &term.to_string() == "Load" {
-                quote! {&& index<=self.valid_until[#prelude]}
+                quote! {&& index<=self.valid_until[#prelude as usize]}
             } else {
                 TokenStream::new()
             };
