@@ -129,7 +129,8 @@ pub(super) fn emit_default_register_width(
 ) -> TokenStream {
     if register_sizes.is_none() {
         return quote! {
-        fn get_default_register_width(&self, index: u32, register: u32) -> usize { unreachable!()}};
+            fn get_default_register_width(&self, index: u32, register: u32) -> usize { compiler_error!("rburg_main! is missing the register width information") }
+        };
     }
 
     let int_size: u32 = int_size.unwrap_or(NonZeroU32::new(32).unwrap()).into();
