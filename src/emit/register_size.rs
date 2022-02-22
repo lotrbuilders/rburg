@@ -168,8 +168,8 @@ pub(super) fn emit_default_register_width(
 
         fn get_default_register_width(&self, index: u32, register: u32) -> usize {
             log::trace!("Get default register of vreg {} at {}",register,index);
-            let size = get_vreg_size(index,register);
-            get_default_register_width2(size)
+            let size = self.get_vreg_size(index,register);
+            self.get_default_register_width2(size)
         }
         fn get_default_register_width2(&self, size: IRSize) -> usize {
             let result = match size {
