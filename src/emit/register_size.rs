@@ -148,31 +148,35 @@ pub(super) fn emit_default_register_width(
     }
 
     quote! {
-        fn get_default_register_width(&self, index: u32, register: u32) -> usize {
-            log::trace!("Get default register of vreg {} at {}",register,index);
+        fn get_vreg_size(&self, index : u32, vreg : u32) -> IRSize {
             let instruction=&self.instructions[index as usize];
-            if index==0 {
-                //let arguments: Vec<_> = self.arguments.arguments.iter().zip().flat_map(|option| option.iter()).collect();
+            if index == 0 {
                 let arguments = &self.arguments.sizes;
-                return self.get_default_register_width2(arguments[register as usize]);
+                return arguments[vreg as usize];
             }
             else if let IRInstruction::Label(Some(phi),_) = instruction {
                 for i in 0..phi.targets.len() {
-                    if phi.targets[i] == register
+                    if phi.targets[i] == vreg
                     {
-                        return self.get_default_register_width2(phi.size[i]);
+                        return phi.size[i];
                     }
                 }
                 unreachable!();
             }
-            self.get_default_register_width2(instruction.get_result_size(IRSize::#int_size))
+            instruction.get_result_size(IRSize::#int_size)
+        }
+
+        fn get_default_register_width(&self, index: u32, register: u32) -> usize {
+            log::trace!("Get default register of vreg {} at {}",register,index);
+            let size = get_vreg_size(index,register);
+            get_default_register_width2(size)
         }
         fn get_default_register_width2(&self, size: IRSize) -> usize {
-            let result=match size {
+            let result = match size {
                 #result
                 _ => unreachable!(),
             };
-            log::trace!("Default register size of {} is {}",size,result);
+            log::trace!("Default register size of {} is {}", size, result);
             result
         }
     }
